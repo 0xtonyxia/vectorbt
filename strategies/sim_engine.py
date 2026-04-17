@@ -1,17 +1,38 @@
 #!/usr/bin/env python3.11
 """
-Pure-Python simulation engine for portfolio backtests.
+Simulation engine for portfolio backtests.
 
-Contains all simulate_* and compute_* functions previously embedded in
-generate_report.py. Shared by run_backtest.py and generate_report.py.
+Design note — vectorbt vs pure Python
+─────────────────────────────────────
+* simulate_buy_and_hold, simulate_rebalance_portfolio:
+    Implemented on top of vectorbt.Portfolio.from_orders with
+    size_type='TargetPercent' + cash_sharing=True. Matches pure Python to
+    $0.00 precision and unlocks vectorbt's parameter sweep / stats APIs.
 
-Input: price data read from Lean-format daily zip files.
-Output: equity curves + metrics dicts (no Lean dependency).
+* simulate_timing1, simulate_timing2:
+    Pure Python loops. These strategies do *partial* per-asset rebalancing
+    (swap only TQQQ↔QQQ while fixed legs drift freely). vectorbt's
+    TargetPercent mode would force re-targeting of ALL assets on swap days,
+    producing subtly different results. Expressing our "touch only these two
+    tickers, leave others alone" logic in vectorbt requires from_order_func
+    with Numba callbacks — substantially more complex than the clean Python
+    implementation. Revisit if/when we start doing large parameter sweeps
+    on timing strategies.
+
+* compute_stats / compute_beta / compute_diversification_ratio:
+    Pure Python. These are exact algorithmic definitions we verified against
+    the Lean output and the web-based JS recalc. We deliberately do not
+    delegate to vbt.Portfolio.stats() because the metric definitions there
+    differ (e.g. Ulcer / UPI are our own, Longest DD in years is our own).
 """
 
 import zipfile
 from datetime import datetime
 from pathlib import Path
+
+import numpy as np
+import pandas as pd
+import vectorbt as vbt
 
 
 # ---------------------------------------------------------------------------
@@ -36,8 +57,108 @@ def read_lean_daily(ticker: str, data_dir: Path) -> dict[str, float]:
     return prices
 
 
+def _prices_to_df(all_prices: dict, tickers: list, dates: list) -> pd.DataFrame:
+    """Convert price dicts → DataFrame on common trading dates, forward-filled."""
+    data = {t: [all_prices.get(t, {}).get(d, np.nan) for d in dates] for t in tickers}
+    df = pd.DataFrame(data, index=pd.to_datetime(dates))
+    df = df.ffill()
+    return df
+
+
 # ---------------------------------------------------------------------------
-# Simulation helpers
+# vectorbt-based portfolio simulations
+# ---------------------------------------------------------------------------
+
+def simulate_buy_and_hold(prices: dict, dates: list, initial: float = 100_000) -> list[float]:
+    """100% buy-and-hold on day 1.
+
+    Uses vbt.Portfolio.from_orders with a single TargetPercent=1 order on t0.
+    """
+    if not dates:
+        return []
+    close = pd.Series([prices.get(d, np.nan) for d in dates],
+                     index=pd.to_datetime(dates)).ffill()
+    if close.isna().all():
+        return [initial] * len(dates)
+
+    size = pd.Series(np.nan, index=close.index)
+    # First day where price is available
+    first_idx = close.first_valid_index()
+    if first_idx is not None:
+        size.loc[first_idx] = 1.0
+
+    pf = vbt.Portfolio.from_orders(
+        close=close, size=size, size_type='TargetPercent',
+        init_cash=initial,
+    )
+    return pf.value().values.tolist()
+
+
+def simulate_rebalance_portfolio(
+    weights: dict,
+    all_prices: dict,
+    dates: list,
+    initial: float = 100_000,
+    return_log: bool = False,
+):
+    """Annual rebalance on year boundary using vectorbt TargetPercent.
+
+    On the first trading day of each calendar year, all target weights are
+    applied simultaneously — vectorbt's auto call_seq handles sells-before-
+    buys internally.
+
+    If return_log=True, returns (equity_list, rebalance_log).
+    """
+    tickers = list(weights.keys())
+    # Keep only dates where ALL tickers have prices (no ffill leak)
+    dates_clean = [d for d in dates if all(all_prices.get(t, {}).get(d) for t in tickers)]
+    if not dates_clean:
+        return ([initial] * len(dates), []) if return_log else [initial] * len(dates)
+
+    close = _prices_to_df(all_prices, tickers, dates_clean)
+
+    # Build target weights: set on first day of each year, NaN elsewhere
+    size = pd.DataFrame(np.nan, index=close.index, columns=close.columns)
+    last_year = None
+    rebal_log = []
+    for d in close.index:
+        if last_year is None or d.year > last_year:
+            for t, w in weights.items():
+                size.at[d, t] = w
+            last_year = d.year
+            if return_log:
+                rebal_log.append({
+                    "date": d.strftime("%Y-%m-%d"),
+                    "type": "annual",
+                    "value": None,  # filled in after simulation
+                })
+
+    pf = vbt.Portfolio.from_orders(
+        close=close, size=size, size_type='TargetPercent',
+        init_cash=initial, group_by=True, cash_sharing=True, call_seq='auto',
+    )
+    eq_clean = pf.value().values.tolist()
+
+    # Map back to the original dates (carry forward on missing days)
+    equity, j = [], 0
+    clean_set = set(dates_clean)
+    for d in dates:
+        if d in clean_set:
+            equity.append(eq_clean[j])
+            j += 1
+        else:
+            equity.append(equity[-1] if equity else initial)
+
+    if return_log:
+        eq_map = dict(zip(dates_clean, eq_clean))
+        for e in rebal_log:
+            e["value"] = float(eq_map.get(e["date"], initial))
+        return equity, rebal_log
+    return equity
+
+
+# ---------------------------------------------------------------------------
+# Timing strategies (pure Python — see module docstring for rationale)
 # ---------------------------------------------------------------------------
 
 def _get_weights(shares: dict, pxs: dict, tickers: list) -> dict:
@@ -57,71 +178,9 @@ def _get_qqq_rv20(qqq_dates_sorted: list, qqq_by_date: dict, as_of: str) -> floa
     return (var ** 0.5) * (252 ** 0.5) * 100
 
 
-# ---------------------------------------------------------------------------
-# Portfolio simulations
-# ---------------------------------------------------------------------------
-
-def simulate_buy_and_hold(prices, dates, initial=100_000):
-    equity, shares = [], 0.0
-    for d in dates:
-        px = prices.get(d)
-        if px is None:
-            equity.append(equity[-1] if equity else initial)
-            continue
-        if shares == 0 and px > 0:
-            shares = initial / px
-        equity.append(shares * px if shares > 0 else initial)
-    return equity
-
-
-def simulate_rebalance_portfolio(weights, all_prices, dates, initial=100_000, return_log=False):
-    """Annual rebalance on year boundary.
-
-    If return_log=True, returns (equity, log) where log contains rebalance events.
-    Otherwise returns just the equity curve (backwards compatible).
-    """
-    tickers = list(weights.keys())
-    equity, shares, last_yr = [], {}, None
-    log = []
-
-    for d in dates:
-        pxs = {}
-        missing = False
-        for t in tickers:
-            px = all_prices.get(t, {}).get(d)
-            if px is None or px <= 0:
-                missing = True
-                break
-            pxs[t] = px
-        if missing:
-            equity.append(equity[-1] if equity else initial)
-            continue
-
-        year = int(d[:4])
-        need = (not shares) or (last_yr is not None and year > last_yr)
-        if need:
-            total = sum(shares.get(t, 0) * pxs[t] for t in tickers) if shares else initial
-            if total <= 0:
-                total = initial
-            before = _get_weights(shares, pxs, tickers) if shares else {}
-            for t in tickers:
-                shares[t] = (total * weights[t]) / pxs[t]
-            last_yr = year
-            if return_log:
-                after = _get_weights(shares, pxs, tickers)
-                log.append({"date": d, "type": "annual", "value": total,
-                            "before": before, "after": after})
-
-        equity.append(sum(shares.get(t, 0) * pxs[t] for t in tickers))
-
-    if return_log:
-        return equity, log
-    return equity
-
-
 def simulate_timing1(all_prices, dates, initial=100_000,
-                    rv_window=20, rv_threshold=22.0, check_months=1):
-    """Timing1: RV > threshold → TQQQ→QQQ; else QQQ→TQQQ. Fixed legs unchanged between annuals."""
+                     rv_window=20, rv_threshold=22.0, check_months=1):
+    """Timing1: RV>threshold → swap TQQQ→QQQ; else QQQ→TQQQ. Fixed legs drift."""
     base_weights = {"TQQQ": 0.35, "BTAL": 0.30, "GLD": 0.15, "XLP": 0.15, "CURE": 0.05}
     all_tickers = list(base_weights.keys()) + ["QQQ"]
 
@@ -212,7 +271,7 @@ def simulate_timing1(all_prices, dates, initial=100_000,
 
 
 def simulate_timing2(all_prices, dates, initial=100_000, rv_threshold=22.0):
-    """Timing2: RV > threshold → 75% QQQ + 25% TQQQ; else all TQQQ."""
+    """Timing2: RV>threshold → 75% QQQ + 25% TQQQ of attack leg; else all TQQQ."""
     base_weights = {"TQQQ": 0.35, "BTAL": 0.30, "GLD": 0.15, "XLP": 0.15, "CURE": 0.05}
     all_tickers = list(base_weights.keys()) + ["QQQ"]
 
@@ -287,7 +346,7 @@ def simulate_timing2(all_prices, dates, initial=100_000, rv_threshold=22.0):
 
 
 # ---------------------------------------------------------------------------
-# Metrics
+# Metrics (pure Python — definitions fixed by our report contract)
 # ---------------------------------------------------------------------------
 
 def compute_stats(equity, dates):
