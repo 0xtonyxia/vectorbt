@@ -18,6 +18,7 @@ Usage:
 
 import argparse
 import json
+import os
 import subprocess
 import sys
 from datetime import datetime, timezone
@@ -28,12 +29,16 @@ DATA_DIR    = REPO_ROOT / "Data" / "equity" / "usa" / "daily"
 OUTPUT_ROOT = REPO_ROOT / "output"
 STRATEGIES  = Path(__file__).resolve().parent
 
-# Make generate_report's simulation functions importable
+# Make sim_engine importable. NOTE: backend selection (set_backend or
+# SIM_BACKEND env var) must happen before any heavy use, which we do
+# from main() based on CLI args.
 sys.path.insert(0, str(STRATEGIES))
 from sim_engine import (  # noqa: E402
     read_lean_daily,
     simulate_rebalance_portfolio,
     compute_stats,
+    set_backend,
+    get_backend,
 )
 
 STRATEGY_NAME = "TQQQPortfolioStrategy"
@@ -42,9 +47,14 @@ INITIAL_CASH  = 100_000
 
 
 def parse_args():
-    p = argparse.ArgumentParser(description="Run pure-Python backtest for TQQQ portfolio strategy.")
+    p = argparse.ArgumentParser(description="Run portfolio strategy backtest.")
     p.add_argument("--start", default="2011-09-14", help="Backtest start date (YYYY-MM-DD).")
     p.add_argument("--end",   default="2026-04-06", help="Backtest end date (YYYY-MM-DD).")
+    p.add_argument(
+        "--backend", choices=["python", "vectorbt"], default="python",
+        help="Simulation backend (default: python, ~300x faster than vectorbt at our scale). "
+             "Use 'vectorbt' if you want to leverage vbt.Portfolio APIs for future parameter sweeps.",
+    )
     p.add_argument("--no-report", action="store_true", help="Skip HTML report generation.")
     p.add_argument("--no-open",   action="store_true", help="Do not auto-open HTML in browser.")
     return p.parse_args()
@@ -208,12 +218,18 @@ def run_report(results_path: Path, open_browser: bool):
 
 def main():
     args = parse_args()
+    set_backend(args.backend)
+
     timestamp  = datetime.now().strftime("%Y%m%d_%H%M%S")
     output_dir = OUTPUT_ROOT / f"{STRATEGY_NAME}-{timestamp}"
     output_dir.mkdir(parents=True, exist_ok=True)
 
+    # Propagate backend choice to the report subprocess via env var
+    os.environ["SIM_BACKEND"] = args.backend
+
     print(f"  Strategy : {STRATEGY_NAME}")
     print(f"  Range    : {args.start} → {args.end}")
+    print(f"  Backend  : {get_backend()}")
     print(f"  Output   : {output_dir}")
 
     results_path = simulate_base_strategy(args.start, args.end, output_dir)
