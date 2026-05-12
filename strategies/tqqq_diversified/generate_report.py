@@ -33,7 +33,7 @@ from sim_engine import (
 # ---------------------------------------------------------------------------
 # Paths
 # ---------------------------------------------------------------------------
-REPO_ROOT = Path(__file__).resolve().parents[1]
+REPO_ROOT = Path(__file__).resolve().parents[2]
 DATA_DIR  = REPO_ROOT / "Data" / "equity" / "usa" / "daily"
 
 results_json = Path(sys.argv[1])
