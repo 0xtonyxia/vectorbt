@@ -65,7 +65,7 @@ rolling    = result.get("rollingWindow", {})
 # Build comparison portfolios
 # Use strategy date range
 _comp_prices = {
-    t: read_lean_daily(t) for t in ["SPY", "QQQ", "TQQQ", "BTAL", "BIL", "GLD", "XLP", "CURE"]
+    t: read_lean_daily(t) for t in ["SPY", "QQQ", "TQQQ", "BTAL", "BIL", "GLD", "XLP", "CURE", "DBMF"]
 }
 
 # ---------------------------------------------------------------------------
@@ -178,6 +178,37 @@ comp_t2_eq, t2_log       = simulate_timing2(_comp_prices, eq_dates, _initial, rv
 comp_t2_25_eq, t2_25_log = simulate_timing2(_comp_prices, eq_dates, _initial, rv_threshold=25)
 comp_t2_20_eq, t2_20_log = simulate_timing2(_comp_prices, eq_dates, _initial, rv_threshold=20)
 
+# DBMF-base variants: same scheme, BTAL→DBMF and 35/30 → 25/40
+_dbmf_base_weights = {"TQQQ": 0.25, "DBMF": 0.40, "GLD": 0.15, "XLP": 0.15, "CURE": 0.05}
+comp_dbmf_strat_eq, dbmf_strat_log = simulate_rebalance_portfolio(
+    _dbmf_base_weights, _comp_prices, eq_dates, _initial, return_log=True,
+)
+comp_t1d_22_eq, t1d_22_log = simulate_timing1(_comp_prices, eq_dates, _initial,
+                                              rv_window=20, rv_threshold=22, check_months=1,
+                                              base_weights=_dbmf_base_weights)
+comp_t1d_25_eq, t1d_25_log = simulate_timing1(_comp_prices, eq_dates, _initial,
+                                              rv_window=20, rv_threshold=25, check_months=1,
+                                              base_weights=_dbmf_base_weights)
+comp_t1d_20_eq, t1d_20_log = simulate_timing1(_comp_prices, eq_dates, _initial,
+                                              rv_window=20, rv_threshold=20, check_months=1,
+                                              base_weights=_dbmf_base_weights)
+
+# DBBT base = 30% TQQQ + 20% DBMF + 15% BTAL + 15% GLD + 15% XLP + 5% CURE
+# (split the hedge leg between DBMF managed futures and BTAL anti-beta)
+_dbbt_base_weights = {"TQQQ": 0.30, "DBMF": 0.20, "BTAL": 0.15, "GLD": 0.15, "XLP": 0.15, "CURE": 0.05}
+comp_dbbt_strat_eq, dbbt_strat_log = simulate_rebalance_portfolio(
+    _dbbt_base_weights, _comp_prices, eq_dates, _initial, return_log=True,
+)
+comp_t1b_22_eq, t1b_22_log = simulate_timing1(_comp_prices, eq_dates, _initial,
+                                              rv_window=20, rv_threshold=22, check_months=1,
+                                              base_weights=_dbbt_base_weights)
+comp_t1b_25_eq, t1b_25_log = simulate_timing1(_comp_prices, eq_dates, _initial,
+                                              rv_window=20, rv_threshold=25, check_months=1,
+                                              base_weights=_dbbt_base_weights)
+comp_t1b_20_eq, t1b_20_log = simulate_timing1(_comp_prices, eq_dates, _initial,
+                                              rv_window=20, rv_threshold=20, check_months=1,
+                                              base_weights=_dbbt_base_weights)
+
 # Simulate strategy from raw price data (same method as comparison portfolios)
 # to avoid Lean equity curve timing artifacts that break beta/vol calculations
 _strat_weights = {"TQQQ": 0.35, "BTAL": 0.30, "GLD": 0.15, "XLP": 0.15, "CURE": 0.05}
@@ -195,6 +226,14 @@ comp_t1_rv60_stats = compute_stats(comp_t1_rv60_eq, eq_dates)
 comp_t2_stats     = compute_stats(comp_t2_eq, eq_dates)
 comp_t2_25_stats  = compute_stats(comp_t2_25_eq, eq_dates)
 comp_t2_20_stats  = compute_stats(comp_t2_20_eq, eq_dates)
+comp_dbmf_strat_stats = compute_stats(comp_dbmf_strat_eq, eq_dates)
+comp_t1d_22_stats     = compute_stats(comp_t1d_22_eq, eq_dates)
+comp_t1d_25_stats     = compute_stats(comp_t1d_25_eq, eq_dates)
+comp_t1d_20_stats     = compute_stats(comp_t1d_20_eq, eq_dates)
+comp_dbbt_strat_stats = compute_stats(comp_dbbt_strat_eq, eq_dates)
+comp_t1b_22_stats     = compute_stats(comp_t1b_22_eq, eq_dates)
+comp_t1b_25_stats     = compute_stats(comp_t1b_25_eq, eq_dates)
+comp_t1b_20_stats     = compute_stats(comp_t1b_20_eq, eq_dates)
 
 # Compute beta vs SPY for all portfolios
 comp_strat_stats["beta"]  = compute_beta(comp_strat_eq, comp_spy_eq)
@@ -208,6 +247,14 @@ comp_t1_rv60_stats["beta"] = compute_beta(comp_t1_rv60_eq, comp_spy_eq)
 comp_t2_stats["beta"]     = compute_beta(comp_t2_eq, comp_spy_eq)
 comp_t2_25_stats["beta"]  = compute_beta(comp_t2_25_eq, comp_spy_eq)
 comp_t2_20_stats["beta"]  = compute_beta(comp_t2_20_eq, comp_spy_eq)
+comp_dbmf_strat_stats["beta"] = compute_beta(comp_dbmf_strat_eq, comp_spy_eq)
+comp_t1d_22_stats["beta"]     = compute_beta(comp_t1d_22_eq, comp_spy_eq)
+comp_t1d_25_stats["beta"]     = compute_beta(comp_t1d_25_eq, comp_spy_eq)
+comp_t1d_20_stats["beta"]     = compute_beta(comp_t1d_20_eq, comp_spy_eq)
+comp_dbbt_strat_stats["beta"] = compute_beta(comp_dbbt_strat_eq, comp_spy_eq)
+comp_t1b_22_stats["beta"]     = compute_beta(comp_t1b_22_eq, comp_spy_eq)
+comp_t1b_25_stats["beta"]     = compute_beta(comp_t1b_25_eq, comp_spy_eq)
+comp_t1b_20_stats["beta"]     = compute_beta(comp_t1b_20_eq, comp_spy_eq)
 
 # Excess annualized return vs SPY
 _spy_cagr = comp_spy_stats.get("cagr", 0)
@@ -215,6 +262,8 @@ _spy_cagr = comp_spy_stats.get("cagr", 0)
 # Diversification ratios
 dr_strat   = compute_diversification_ratio(_strat_weights, _all_strat_prices, eq_dates)
 dr_bt50    = compute_diversification_ratio({"BTAL": 0.50, "TQQQ": 0.50}, _comp_prices, eq_dates)
+dr_dbmf_strat = compute_diversification_ratio(_dbmf_base_weights, _comp_prices, eq_dates)
+dr_dbbt_strat = compute_diversification_ratio(_dbbt_base_weights, _comp_prices, eq_dates)
 dr_t1 = dr_t1_25 = dr_t1_20 = dr_t1_rv60 = dr_t2 = 0.0  # timing: variable weights
 
 # Drawdown series for all portfolios (negative values, 0% at top)
@@ -226,6 +275,14 @@ dd_t1_rv60 = comp_t1_rv60_stats.get("dd_series", [])
 dd_t2      = comp_t2_stats.get("dd_series", [])
 dd_t2_25   = comp_t2_25_stats.get("dd_series", [])
 dd_t2_20   = comp_t2_20_stats.get("dd_series", [])
+dd_dbmf_strat = comp_dbmf_strat_stats.get("dd_series", [])
+dd_t1d_22  = comp_t1d_22_stats.get("dd_series", [])
+dd_t1d_25  = comp_t1d_25_stats.get("dd_series", [])
+dd_t1d_20  = comp_t1d_20_stats.get("dd_series", [])
+dd_dbbt_strat = comp_dbbt_strat_stats.get("dd_series", [])
+dd_t1b_22  = comp_t1b_22_stats.get("dd_series", [])
+dd_t1b_25  = comp_t1b_25_stats.get("dd_series", [])
+dd_t1b_20  = comp_t1b_20_stats.get("dd_series", [])
 # Also replace equity values for charts with simulated (avoids Lean timing artifacts)
 eq_vals = comp_strat_eq
 dd_spy   = comp_spy_stats.get("dd_series", [])
@@ -245,6 +302,14 @@ _dd_min = min(
     min(dd_t2) if dd_t2 else 0,
     min(dd_t2_25) if dd_t2_25 else 0,
     min(dd_t2_20) if dd_t2_20 else 0,
+    min(dd_dbmf_strat) if dd_dbmf_strat else 0,
+    min(dd_t1d_22) if dd_t1d_22 else 0,
+    min(dd_t1d_25) if dd_t1d_25 else 0,
+    min(dd_t1d_20) if dd_t1d_20 else 0,
+    min(dd_dbbt_strat) if dd_dbbt_strat else 0,
+    min(dd_t1b_22) if dd_t1b_22 else 0,
+    min(dd_t1b_25) if dd_t1b_25 else 0,
+    min(dd_t1b_20) if dd_t1b_20 else 0,
 ) * 1.05
 _dd_range_json = j([round(_dd_min, 2), 2])
 
@@ -259,6 +324,14 @@ _, comp_t1_rv60_ann = compute_annual_returns(eq_dates, comp_t1_rv60_eq) if comp_
 _, comp_t2_ann     = compute_annual_returns(eq_dates, comp_t2_eq) if comp_t2_eq else ([], [])
 _, comp_t2_25_ann  = compute_annual_returns(eq_dates, comp_t2_25_eq) if comp_t2_25_eq else ([], [])
 _, comp_t2_20_ann  = compute_annual_returns(eq_dates, comp_t2_20_eq) if comp_t2_20_eq else ([], [])
+_, comp_dbmf_strat_ann = compute_annual_returns(eq_dates, comp_dbmf_strat_eq) if comp_dbmf_strat_eq else ([], [])
+_, comp_t1d_22_ann = compute_annual_returns(eq_dates, comp_t1d_22_eq) if comp_t1d_22_eq else ([], [])
+_, comp_t1d_25_ann = compute_annual_returns(eq_dates, comp_t1d_25_eq) if comp_t1d_25_eq else ([], [])
+_, comp_t1d_20_ann = compute_annual_returns(eq_dates, comp_t1d_20_eq) if comp_t1d_20_eq else ([], [])
+_, comp_dbbt_strat_ann = compute_annual_returns(eq_dates, comp_dbbt_strat_eq) if comp_dbbt_strat_eq else ([], [])
+_, comp_t1b_22_ann = compute_annual_returns(eq_dates, comp_t1b_22_eq) if comp_t1b_22_eq else ([], [])
+_, comp_t1b_25_ann = compute_annual_returns(eq_dates, comp_t1b_25_eq) if comp_t1b_25_eq else ([], [])
+_, comp_t1b_20_ann = compute_annual_returns(eq_dates, comp_t1b_20_eq) if comp_t1b_20_eq else ([], [])
 
 # Daily returns (deduplicated)
 _ret_seen = {}
@@ -365,6 +438,7 @@ else:
 TICKER_COLORS = {
     "TQQQ": "#6366f1", "BTAL": "#f97316", "GLD": "#eab308",
     "XLP": "#22c55e", "CURE": "#ec4899", "SPY": "#64748b",
+    "DBMF": "#3b82f6",
 }
 
 def ret_color(v, light=False):
@@ -468,7 +542,7 @@ def _fmt_weights(w: dict) -> str:
     if not w:
         return "-"
     parts = []
-    for t in ["TQQQ", "QQQ", "BTAL", "GLD", "XLP", "CURE"]:
+    for t in ["TQQQ", "QQQ", "BTAL", "DBMF", "GLD", "XLP", "CURE"]:
         v = w.get(t, 0)
         if v > 0.5:
             parts.append(f"{t}:{v:.1f}%")
@@ -508,6 +582,12 @@ log_html += _build_log_html("Timing1-RV60-22%", t1_rv60_log, "#14b8a6")
 log_html += _build_log_html("Timing2-RV20-22%", t2_log, "#b45309")
 log_html += _build_log_html("Timing2-RV20-25%", t2_25_log, "#92400e")
 log_html += _build_log_html("Timing2-RV20-20%", t2_20_log, "#78350f")
+log_html += _build_log_html("Timing1-DBMF-RV20-22%", t1d_22_log, "#3b82f6")
+log_html += _build_log_html("Timing1-DBMF-RV20-25%", t1d_25_log, "#0891b2")
+log_html += _build_log_html("Timing1-DBMF-RV20-20%", t1d_20_log, "#0d9488")
+log_html += _build_log_html("Timing1-DBBT-RV20-22%", t1b_22_log, "#e11d48")
+log_html += _build_log_html("Timing1-DBBT-RV20-25%", t1b_25_log, "#f43f5e")
+log_html += _build_log_html("Timing1-DBBT-RV20-20%", t1b_20_log, "#fb7185")
 
 # ---------------------------------------------------------------------------
 # Portfolio registry for table/chart generation
@@ -521,6 +601,14 @@ _portfolios = [
     {"name": "Timing2-RV20-22%", "color": "#b45309", "stats": comp_t2_stats, "eq": comp_t2_eq, "dd": dd_t2, "ann": comp_t2_ann, "dr": 0, "bg": "#fef3c7"},
     {"name": "Timing2-RV20-25%", "color": "#92400e", "stats": comp_t2_25_stats, "eq": comp_t2_25_eq, "dd": dd_t2_25, "ann": comp_t2_25_ann, "dr": 0, "bg": "#fefce8"},
     {"name": "Timing2-RV20-20%", "color": "#78350f", "stats": comp_t2_20_stats, "eq": comp_t2_20_eq, "dd": dd_t2_20, "ann": comp_t2_20_ann, "dr": 0, "bg": "#fffbeb"},
+    {"name": "25tqqq+40dbmf+15gld+15xlp+5cure", "color": "#1e40af", "stats": comp_dbmf_strat_stats, "eq": comp_dbmf_strat_eq, "dd": dd_dbmf_strat, "ann": comp_dbmf_strat_ann, "dr": dr_dbmf_strat, "bg": "#dbeafe"},
+    {"name": "Timing1-DBMF-RV20-22%", "color": "#3b82f6", "stats": comp_t1d_22_stats, "eq": comp_t1d_22_eq, "dd": dd_t1d_22, "ann": comp_t1d_22_ann, "dr": 0, "bg": "#eff6ff"},
+    {"name": "Timing1-DBMF-RV20-25%", "color": "#0891b2", "stats": comp_t1d_25_stats, "eq": comp_t1d_25_eq, "dd": dd_t1d_25, "ann": comp_t1d_25_ann, "dr": 0, "bg": "#cffafe"},
+    {"name": "Timing1-DBMF-RV20-20%", "color": "#0d9488", "stats": comp_t1d_20_stats, "eq": comp_t1d_20_eq, "dd": dd_t1d_20, "ann": comp_t1d_20_ann, "dr": 0, "bg": "#ccfbf1"},
+    {"name": "30tqqq+20dbmf+15btal+15gld+15xlp+5cure", "color": "#9f1239", "stats": comp_dbbt_strat_stats, "eq": comp_dbbt_strat_eq, "dd": dd_dbbt_strat, "ann": comp_dbbt_strat_ann, "dr": dr_dbbt_strat, "bg": "#ffe4e6"},
+    {"name": "Timing1-DBBT-RV20-22%", "color": "#e11d48", "stats": comp_t1b_22_stats, "eq": comp_t1b_22_eq, "dd": dd_t1b_22, "ann": comp_t1b_22_ann, "dr": 0, "bg": "#fff1f2"},
+    {"name": "Timing1-DBBT-RV20-25%", "color": "#f43f5e", "stats": comp_t1b_25_stats, "eq": comp_t1b_25_eq, "dd": dd_t1b_25, "ann": comp_t1b_25_ann, "dr": 0, "bg": "#ffe4e6"},
+    {"name": "Timing1-DBBT-RV20-20%", "color": "#fb7185", "stats": comp_t1b_20_stats, "eq": comp_t1b_20_eq, "dd": dd_t1b_20, "ann": comp_t1b_20_ann, "dr": 0, "bg": "#fff1f2"},
     {"name": "100% SPY", "color": "#f59e0b", "stats": comp_spy_stats, "eq": comp_spy_eq, "dd": dd_spy, "ann": comp_spy_ann, "dr": 1.0, "bg": ""},
     {"name": "100% QQQ", "color": "#06b6d4", "stats": comp_qqq_stats, "eq": comp_qqq_eq, "dd": dd_qqq, "ann": comp_qqq_ann, "dr": 1.0, "bg": ""},
     {"name": "50%BTAL+50%TQQQ", "color": "#22c55e", "stats": comp_bt50_stats, "eq": comp_bt50_eq, "dd": dd_bt50, "ann": comp_bt50_ann, "dr": dr_bt50, "bg": ""},
@@ -936,8 +1024,12 @@ const DD_qqq   = {j(dd_qqq)};
 const DD_bt50  = {j(dd_bt50)};
 const V_t1={j(comp_t1_eq)}, V_t1_25={j(comp_t1_25_eq)}, V_t1_20={j(comp_t1_20_eq)}, V_t1_rv60={j(comp_t1_rv60_eq)};
 const V_t2={j(comp_t2_eq)}, V_t2_25={j(comp_t2_25_eq)}, V_t2_20={j(comp_t2_20_eq)};
+const V_dbmf_strat={j(comp_dbmf_strat_eq)}, V_t1d_22={j(comp_t1d_22_eq)}, V_t1d_25={j(comp_t1d_25_eq)}, V_t1d_20={j(comp_t1d_20_eq)};
+const V_dbbt_strat={j(comp_dbbt_strat_eq)}, V_t1b_22={j(comp_t1b_22_eq)}, V_t1b_25={j(comp_t1b_25_eq)}, V_t1b_20={j(comp_t1b_20_eq)};
 const DD_t1={j(dd_t1)}, DD_t1_25={j(dd_t1_25)}, DD_t1_20={j(dd_t1_20)}, DD_t1_rv60={j(dd_t1_rv60)};
 const DD_t2={j(dd_t2)}, DD_t2_25={j(dd_t2_25)}, DD_t2_20={j(dd_t2_20)};
+const DD_dbmf_strat={j(dd_dbmf_strat)}, DD_t1d_22={j(dd_t1d_22)}, DD_t1d_25={j(dd_t1d_25)}, DD_t1d_20={j(dd_t1d_20)};
+const DD_dbbt_strat={j(dd_dbbt_strat)}, DD_t1b_22={j(dd_t1b_22)}, DD_t1b_25={j(dd_t1b_25)}, DD_t1b_20={j(dd_t1b_20)};
 
 /* ── DD annotation helpers ── */
 function computeDDSpans(dates, vals, i0, i1) {{
@@ -1019,6 +1111,14 @@ function renderChart(id) {{
       {{x:D,y:V_t2,name:'T2-22%',type:'scatter',mode:'lines',line:{{color:'#b45309',width:1.5}}}},
       {{x:D,y:V_t2_25,name:'T2-25%',type:'scatter',mode:'lines',line:{{color:'#92400e',width:1}}}},
       {{x:D,y:V_t2_20,name:'T2-20%',type:'scatter',mode:'lines',line:{{color:'#78350f',width:1}}}},
+      {{x:D,y:V_dbmf_strat,name:'DBMF-Base',type:'scatter',mode:'lines',line:{{color:'#1e40af',width:2}}}},
+      {{x:D,y:V_t1d_22,name:'T1-DBMF-22%',type:'scatter',mode:'lines',line:{{color:'#3b82f6',width:1.5}}}},
+      {{x:D,y:V_t1d_25,name:'T1-DBMF-25%',type:'scatter',mode:'lines',line:{{color:'#0891b2',width:1.5}}}},
+      {{x:D,y:V_t1d_20,name:'T1-DBMF-20%',type:'scatter',mode:'lines',line:{{color:'#0d9488',width:1.5}}}},
+      {{x:D,y:V_dbbt_strat,name:'DBBT-Base',type:'scatter',mode:'lines',line:{{color:'#9f1239',width:2}}}},
+      {{x:D,y:V_t1b_22,name:'T1-DBBT-22%',type:'scatter',mode:'lines',line:{{color:'#e11d48',width:1.5}}}},
+      {{x:D,y:V_t1b_25,name:'T1-DBBT-25%',type:'scatter',mode:'lines',line:{{color:'#f43f5e',width:1.5}}}},
+      {{x:D,y:V_t1b_20,name:'T1-DBBT-20%',type:'scatter',mode:'lines',line:{{color:'#fb7185',width:1.5}}}},
     ],{{...L_custom,yaxis:{{...L_custom.yaxis,title:'Portfolio Value ($)',tickformat:'$,.0f'}}}},C);
     setupSortedHover('ch-equity');
     updateDDAnnotations();
@@ -1036,6 +1136,14 @@ function renderChart(id) {{
       {{x:D,y:DD_t2,name:'T2-22%',type:'scatter',mode:'lines',line:{{color:'#b45309',width:1}}}},
       {{x:D,y:DD_t2_25,name:'T2-25%',type:'scatter',mode:'lines',line:{{color:'#92400e',width:1}}}},
       {{x:D,y:DD_t2_20,name:'T2-20%',type:'scatter',mode:'lines',line:{{color:'#78350f',width:1}}}},
+      {{x:D,y:DD_dbmf_strat,name:'DBMF-Base',type:'scatter',mode:'lines',line:{{color:'#1e40af',width:1.5}}}},
+      {{x:D,y:DD_t1d_22,name:'T1-DBMF-22%',type:'scatter',mode:'lines',line:{{color:'#3b82f6',width:1}}}},
+      {{x:D,y:DD_t1d_25,name:'T1-DBMF-25%',type:'scatter',mode:'lines',line:{{color:'#0891b2',width:1}}}},
+      {{x:D,y:DD_t1d_20,name:'T1-DBMF-20%',type:'scatter',mode:'lines',line:{{color:'#0d9488',width:1}}}},
+      {{x:D,y:DD_dbbt_strat,name:'DBBT-Base',type:'scatter',mode:'lines',line:{{color:'#9f1239',width:1.5}}}},
+      {{x:D,y:DD_t1b_22,name:'T1-DBBT-22%',type:'scatter',mode:'lines',line:{{color:'#e11d48',width:1}}}},
+      {{x:D,y:DD_t1b_25,name:'T1-DBBT-25%',type:'scatter',mode:'lines',line:{{color:'#f43f5e',width:1}}}},
+      {{x:D,y:DD_t1b_20,name:'T1-DBBT-20%',type:'scatter',mode:'lines',line:{{color:'#fb7185',width:1}}}},
     ],{{...L_custom,yaxis:{{...L_custom.yaxis,title:'Drawdown',tickformat:'.1f',ticksuffix:'%',range:ddRange}},margin:{{t:50,r:20,b:40,l:90}}}},C);
     setupSortedHover('ch-dd-summary');
   }}
@@ -1052,6 +1160,14 @@ function renderChart(id) {{
       {{x:{j(ann_years)},y:{j(comp_t2_ann)},name:'T2-RV20-22%',type:'bar',marker:{{color:'#b45309'}},hovertemplate:'%{{y:.1f}}%<extra>%{{fullData.name}}</extra>',visible:'legendonly'}},
       {{x:{j(ann_years)},y:{j(comp_t2_20_ann)},name:'T2-RV20-20%',type:'bar',marker:{{color:'#78350f'}},hovertemplate:'%{{y:.1f}}%<extra>%{{fullData.name}}</extra>',visible:'legendonly'}},
       {{x:{j(ann_years)},y:{j(comp_bt50_ann)},name:'50%BTAL+50%TQQQ',type:'bar',marker:{{color:'#22c55e'}},hovertemplate:'%{{y:.1f}}%<extra>%{{fullData.name}}</extra>',visible:'legendonly'}},
+      {{x:{j(ann_years)},y:{j(comp_dbmf_strat_ann)},name:'DBMF-Base',type:'bar',marker:{{color:'#1e40af'}},hovertemplate:'%{{y:.1f}}%<extra>%{{fullData.name}}</extra>'}},
+      {{x:{j(ann_years)},y:{j(comp_t1d_25_ann)},name:'T1-DBMF-25%',type:'bar',marker:{{color:'#0891b2'}},hovertemplate:'%{{y:.1f}}%<extra>%{{fullData.name}}</extra>'}},
+      {{x:{j(ann_years)},y:{j(comp_t1d_22_ann)},name:'T1-DBMF-22%',type:'bar',marker:{{color:'#3b82f6'}},hovertemplate:'%{{y:.1f}}%<extra>%{{fullData.name}}</extra>',visible:'legendonly'}},
+      {{x:{j(ann_years)},y:{j(comp_t1d_20_ann)},name:'T1-DBMF-20%',type:'bar',marker:{{color:'#0d9488'}},hovertemplate:'%{{y:.1f}}%<extra>%{{fullData.name}}</extra>',visible:'legendonly'}},
+      {{x:{j(ann_years)},y:{j(comp_dbbt_strat_ann)},name:'DBBT-Base',type:'bar',marker:{{color:'#9f1239'}},hovertemplate:'%{{y:.1f}}%<extra>%{{fullData.name}}</extra>'}},
+      {{x:{j(ann_years)},y:{j(comp_t1b_25_ann)},name:'T1-DBBT-25%',type:'bar',marker:{{color:'#f43f5e'}},hovertemplate:'%{{y:.1f}}%<extra>%{{fullData.name}}</extra>'}},
+      {{x:{j(ann_years)},y:{j(comp_t1b_22_ann)},name:'T1-DBBT-22%',type:'bar',marker:{{color:'#e11d48'}},hovertemplate:'%{{y:.1f}}%<extra>%{{fullData.name}}</extra>',visible:'legendonly'}},
+      {{x:{j(ann_years)},y:{j(comp_t1b_20_ann)},name:'T1-DBBT-20%',type:'bar',marker:{{color:'#fb7185'}},hovertemplate:'%{{y:.1f}}%<extra>%{{fullData.name}}</extra>',visible:'legendonly'}},
     ],{{...L_native,barmode:'group',yaxis:{{...L_native.yaxis,title:'Return (%)',ticksuffix:'%'}},margin:{{t:50,r:20,b:50,l:90}}}},C);
   }}
   else if(id==='ch-hist') {{
@@ -1073,6 +1189,14 @@ function renderChart(id) {{
       {{x:D,y:DD_t2,name:'T2-22%',type:'scatter',mode:'lines',line:{{color:'#b45309',width:1}}}},
       {{x:D,y:DD_t2_25,name:'T2-25%',type:'scatter',mode:'lines',line:{{color:'#92400e',width:1}}}},
       {{x:D,y:DD_t2_20,name:'T2-20%',type:'scatter',mode:'lines',line:{{color:'#78350f',width:1}}}},
+      {{x:D,y:DD_dbmf_strat,name:'DBMF-Base',type:'scatter',mode:'lines',line:{{color:'#1e40af',width:1.5}}}},
+      {{x:D,y:DD_t1d_22,name:'T1-DBMF-22%',type:'scatter',mode:'lines',line:{{color:'#3b82f6',width:1}}}},
+      {{x:D,y:DD_t1d_25,name:'T1-DBMF-25%',type:'scatter',mode:'lines',line:{{color:'#0891b2',width:1}}}},
+      {{x:D,y:DD_t1d_20,name:'T1-DBMF-20%',type:'scatter',mode:'lines',line:{{color:'#0d9488',width:1}}}},
+      {{x:D,y:DD_dbbt_strat,name:'DBBT-Base',type:'scatter',mode:'lines',line:{{color:'#9f1239',width:1.5}}}},
+      {{x:D,y:DD_t1b_22,name:'T1-DBBT-22%',type:'scatter',mode:'lines',line:{{color:'#e11d48',width:1}}}},
+      {{x:D,y:DD_t1b_25,name:'T1-DBBT-25%',type:'scatter',mode:'lines',line:{{color:'#f43f5e',width:1}}}},
+      {{x:D,y:DD_t1b_20,name:'T1-DBBT-20%',type:'scatter',mode:'lines',line:{{color:'#fb7185',width:1}}}},
     ],{{...L_custom,yaxis:{{...L_custom.yaxis,title:'Drawdown',tickformat:'.1f',ticksuffix:'%',range:ddRange}}}},C);
     setupSortedHover('ch-dd-full');
   }}
@@ -1137,6 +1261,14 @@ const PORTFOLIOS = [
   {{name:'Timing2-RV20-22%',color:'#b45309',eq:V_t2,dd:DD_t2,bg:'#fef3c7',dr:0}},
   {{name:'Timing2-RV20-25%',color:'#92400e',eq:V_t2_25,dd:DD_t2_25,bg:'#fefce8',dr:0}},
   {{name:'Timing2-RV20-20%',color:'#78350f',eq:V_t2_20,dd:DD_t2_20,bg:'#fffbeb',dr:0}},
+  {{name:'25tqqq+40dbmf+15gld+15xlp+5cure',color:'#1e40af',eq:V_dbmf_strat,dd:DD_dbmf_strat,bg:'#dbeafe',dr:{f'{dr_dbmf_strat:.2f}'} }},
+  {{name:'Timing1-DBMF-RV20-22%',color:'#3b82f6',eq:V_t1d_22,dd:DD_t1d_22,bg:'#eff6ff',dr:0}},
+  {{name:'Timing1-DBMF-RV20-25%',color:'#0891b2',eq:V_t1d_25,dd:DD_t1d_25,bg:'#cffafe',dr:0}},
+  {{name:'Timing1-DBMF-RV20-20%',color:'#0d9488',eq:V_t1d_20,dd:DD_t1d_20,bg:'#ccfbf1',dr:0}},
+  {{name:'30tqqq+20dbmf+15btal+15gld+15xlp+5cure',color:'#9f1239',eq:V_dbbt_strat,dd:DD_dbbt_strat,bg:'#ffe4e6',dr:{f'{dr_dbbt_strat:.2f}'} }},
+  {{name:'Timing1-DBBT-RV20-22%',color:'#e11d48',eq:V_t1b_22,dd:DD_t1b_22,bg:'#fff1f2',dr:0}},
+  {{name:'Timing1-DBBT-RV20-25%',color:'#f43f5e',eq:V_t1b_25,dd:DD_t1b_25,bg:'#ffe4e6',dr:0}},
+  {{name:'Timing1-DBBT-RV20-20%',color:'#fb7185',eq:V_t1b_20,dd:DD_t1b_20,bg:'#fff1f2',dr:0}},
   {{name:'100% SPY',color:'#f59e0b',eq:V_spy,dd:DD_spy,bg:'',dr:1}},
   {{name:'100% QQQ',color:'#06b6d4',eq:V_qqq,dd:DD_qqq,bg:'',dr:1}},
   {{name:'50%BTAL+50%TQQQ',color:'#22c55e',eq:V_bt50,dd:DD_bt50,bg:'',dr:{f'{dr_bt50:.2f}'} }},

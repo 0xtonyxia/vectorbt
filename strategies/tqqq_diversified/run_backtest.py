@@ -11,8 +11,8 @@ Output:  <repo>/output/TQQQPortfolioStrategy-<YYYYMMDD_HHMMSS>/
            └── TQQQPortfolioStrategy-log.txt  (rebalance log)
 
 Usage:
-    python3.11 run_backtest.py                # default 2011-09-14 → 2026-04-06
-    python3.11 run_backtest.py --start 2017-01-01 --end 2026-04-06
+    python3.11 run_backtest.py                # default 2019-05-08 → 2026-04-06 (DBMF inception)
+    python3.11 run_backtest.py --start 2011-09-14 --end 2026-04-06   # full history (DBMF strategies will be flat pre-2019-05-08)
     python3.11 run_backtest.py --no-open      # don't open browser
 """
 
@@ -48,8 +48,8 @@ INITIAL_CASH  = 100_000
 
 def parse_args():
     p = argparse.ArgumentParser(description="Run portfolio strategy backtest.")
-    p.add_argument("--start", default="2011-09-14", help="Backtest start date (YYYY-MM-DD).")
-    p.add_argument("--end",   default="2026-04-06", help="Backtest end date (YYYY-MM-DD).")
+    p.add_argument("--start", default="2019-05-08", help="Backtest start date (YYYY-MM-DD). Default is DBMF's inception so all 15 portfolios share the same window.")
+    p.add_argument("--end",   default="2026-05-14", help="Backtest end date (YYYY-MM-DD).")
     p.add_argument(
         "--backend", choices=["python", "vectorbt"], default="python",
         help="Simulation backend (default: python, ~300x faster than vectorbt at our scale). "

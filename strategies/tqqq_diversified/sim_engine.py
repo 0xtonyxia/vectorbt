@@ -263,8 +263,15 @@ def _get_qqq_rv20(qqq_dates_sorted: list, qqq_by_date: dict, as_of: str) -> floa
 
 
 def simulate_timing1(all_prices, dates, initial=100_000,
-                     rv_window=20, rv_threshold=22.0, check_months=1):
-    base_weights = {"TQQQ": 0.35, "BTAL": 0.30, "GLD": 0.15, "XLP": 0.15, "CURE": 0.05}
+                     rv_window=20, rv_threshold=22.0, check_months=1,
+                     base_weights=None):
+    """Annual rebalance + periodic TQQQ↔QQQ swap based on QQQ's realized vol.
+
+    The base_weights dict MUST contain a 'TQQQ' key (the attack leg that gets
+    swapped). Other legs drift freely between annual rebalances.
+    """
+    if base_weights is None:
+        base_weights = {"TQQQ": 0.35, "BTAL": 0.30, "GLD": 0.15, "XLP": 0.15, "CURE": 0.05}
     all_tickers = list(base_weights.keys()) + ["QQQ"]
 
     qqq_prices = all_prices.get("QQQ", {})

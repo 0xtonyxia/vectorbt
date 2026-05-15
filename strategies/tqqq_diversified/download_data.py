@@ -45,9 +45,9 @@ import yfinance as yf
 # Defaults
 # ---------------------------------------------------------------------------
 
-DEFAULT_TICKERS: list[str] = ["TQQQ", "BTAL", "GLD", "XLP", "CURE", "SPY"]
+DEFAULT_TICKERS: list[str] = ["TQQQ", "BTAL", "GLD", "XLP", "CURE", "SPY", "QQQ", "DBMF"]
 
-REPO_ROOT        = Path(__file__).resolve().parents[3]
+REPO_ROOT        = Path(__file__).resolve().parents[2]
 DEFAULT_DATA_DIR = REPO_ROOT / "Data" / "equity" / "usa" / "daily"
 
 RETRY_ATTEMPTS = 5

@@ -31,6 +31,9 @@ The deliverable is a **single interactive HTML report** with:
 - XLP: consumer staples ETF (defensive)
 - CURE: 3x leveraged healthcare (niche growth)
 
+### DBMF-based base: `25% TQQQ + 40% DBMF + 15% GLD + 15% XLP + 5% CURE`
+Same annual-rebalance scheme as the BTAL base, but uses **DBMF** (iMGP DBi Managed Futures Strategy ETF) as the diversifier instead of BTAL, with weights tilted toward the trend-following hedge (40%) and away from leverage (25% TQQQ). DBMF inception is 2019-05-08, so the default backtest window starts there.
+
 ### Timing1 variants (4 of them)
 On the **first trading day of each month** (or quarter), check QQQ's realized vol; swap the 35% attack leg between TQQQ and QQQ:
 - If `RV > threshold` and currently TQQQ → swap all to QQQ
@@ -55,12 +58,35 @@ Same monthly check, but instead of all-or-nothing swap:
 | `Timing2-RV20-25%` | 25% |
 | `Timing2-RV20-20%` | 20% |
 
+### Timing1-DBMF variants (3 of them)
+Same Timing1 swap logic (monthly QQQ RV20 check, all-or-nothing TQQQ↔QQQ swap; DBMF/GLD/XLP/CURE drift freely between annual rebalances) but on the DBMF-based 25/40/15/15/5 base.
+
+| Variant | Threshold |
+|---|---|
+| `Timing1-DBMF-RV20-25%` | 25% |
+| `Timing1-DBMF-RV20-22%` | 22% |
+| `Timing1-DBMF-RV20-20%` | 20% |
+
+### DBBT-based base: `30% TQQQ + 20% DBMF + 15% BTAL + 15% GLD + 15% XLP + 5% CURE`
+Splits the 35% hedge bucket between trend-following (DBMF) and anti-beta (BTAL). Same annual rebalance scheme.
+
+### Timing1-DBBT variants (3 of them)
+Same Timing1 logic on the DBBT base. DBMF/BTAL/GLD/XLP/CURE drift freely between annual rebalances; only TQQQ↔QQQ gets swapped on monthly RV checks.
+
+| Variant | Threshold |
+|---|---|
+| `Timing1-DBBT-RV20-25%` | 25% |
+| `Timing1-DBBT-RV20-22%` | 22% |
+| `Timing1-DBBT-RV20-20%` | 20% |
+
 ### Comparison benchmarks
 - `100% SPY` (buy-and-hold)
 - `100% QQQ` (buy-and-hold)
 - `50% BTAL + 50% TQQQ` (annual rebalance)
 
-**Result for 14.6-year backtest (2011-09-14 → 2026-04-06)**:
+**Default backtest is now `2019-05-08 → today`** (DBMF inception). This puts the BTAL- and DBMF-based families on the same window. Use `--start 2011-09-14` to re-run the long history (DBMF series will be flat / NaN pre-2019).
+
+**Result for 14.6-year run (2011-09-14 → 2026-04-06, BTAL family only)**:
 - Base strategy: $100K → **$1.99M** (CAGR 22.78%, Max DD -32.52%)
 - Best variant: `Timing1-RV20-25%`: CAGR 23.51%, Max DD **-21.20%** (much better Calmar)
 
@@ -74,7 +100,7 @@ Same monthly check, but instead of all-or-nothing swap:
 ├── HANDOFF.md                    # THIS FILE
 │
 ├── Data/equity/usa/daily/        # Daily OHLCV zips (Lean format: yyyyMMdd HH:mm,O,H,L,C,V *10000)
-│   ├── tqqq.zip  btal.zip  gld.zip  xlp.zip  cure.zip
+│   ├── tqqq.zip  btal.zip  gld.zip  xlp.zip  cure.zip  dbmf.zip
 │   └── spy.zip   qqq.zip   bil.zip
 │
 ├── strategies/
@@ -103,7 +129,7 @@ cd ~/work/vectorbt
 # 1. Refresh price data (incremental, only fetches new days since last run)
 python3.11 strategies/tqqq_diversified/download_data.py
 
-# 2. Full backtest, default range 2011-09-14 → 2026-04-06, auto-opens HTML
+# 2. Full backtest, default range 2019-05-08 → end, auto-opens HTML
 python3.11 strategies/tqqq_diversified/run_backtest.py
 
 # Useful flags:
@@ -267,7 +293,7 @@ Should be empty (both backends produce byte-identical JSON).
 
 2. **HTML doesn't load / hangs**: open Chrome DevTools, check for JS errors. The most common causes are: oversized inline arrays (we already use rounded floats and deduplicated dates to keep size <2MB), or `Plotly.react` triggering events that re-enter `recalcAll` (look for guard flags like `_ddUpdating`).
 
-3. **Data missing for recent dates**: `python3.11 strategies/tqqq_diversified/download_data.py` does incremental updates; check yfinance is reachable. Note: the script falls back to `yf.Ticker(...).history()` if `yf.download()` hits SSL errors (curl_cffi flaky on some networks).
+3. **Data missing for recent dates**: `python3.11 strategies/tqqq_diversified/download_data.py` does incremental updates; check yfinance is reachable. **Yahoo aggressively rate-limits this user's home ISP** — always export the local proxy first (`export https_proxy=http://127.0.0.1:12334 http_proxy=http://127.0.0.1:12334 all_proxy=socks5://127.0.0.1:12334`) and make sure that proxy is actually running. Without it you'll see `YFRateLimitError` and no fallback (curl_cffi, Ticker.history) helps.
 
 4. **vectorbt backend errors**: it lazy-imports vectorbt only when used, so a missing install only surfaces with `--backend vectorbt`. Reinstall: `pip install vectorbt==0.28.5`.
 
@@ -280,12 +306,22 @@ After cloning fresh / pulling new changes:
 ```bash
 cd ~/work/vectorbt
 git status                      # should be on us-market-strategy-bt
+
+# Make sure proxy is on before download_data (Yahoo rate-limits home IP):
+export https_proxy=http://127.0.0.1:12334 http_proxy=http://127.0.0.1:12334 all_proxy=socks5://127.0.0.1:12334
+python3.11 strategies/tqqq_diversified/download_data.py    # refresh price data
 python3.11 strategies/tqqq_diversified/run_backtest.py --no-open
 # Should complete in ~0.4s, produce output/latest/TQQQPortfolioStrategy.html
-# Expected: End equity ~$1,985,549 for default 2011-09-14 → 2026-04-06 range
+# Expected for default 2019-05-08 → 2026-05-14 (run on 2026-05-15):
+#   35%TQQQ+30%BTAL base:                       $512,139   (CAGR 26.21%, MaxDD -32.52%)
+#   25%TQQQ+40%DBMF base:                       $504,338   (CAGR 25.93%, MaxDD -30.50%)
+#   30%TQQQ+20%DBMF+15%BTAL (DBBT base):        $510,521   (CAGR 26.15%, MaxDD -31.32%)
+#   Timing1-RV20-25%:                           $556,265   (CAGR 27.71%, MaxDD -21.20%)
+#   Timing1-DBMF-RV20-25%:                      $533,448   (CAGR 26.95%, MaxDD -22.17%)
+#   Timing1-DBBT-RV20-25%:                      $546,956   (CAGR 27.40%, MaxDD -21.50%)
 ```
 
-If end equity differs, the simulation logic regressed. The exact figure should be `$1,985,549.45` (matches across all prior runs).
+If the base end equity differs, the simulation logic regressed. For the long-history sanity check, run `--start 2011-09-14 --end 2026-04-06` and expect base end equity = `$1,985,549.45` (pre-DBMF era; DBMF strategies will be flat at $100K for that range).
 
 ---
 
