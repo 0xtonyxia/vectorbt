@@ -49,7 +49,7 @@ INITIAL_CASH  = 100_000
 def parse_args():
     p = argparse.ArgumentParser(description="Run portfolio strategy backtest.")
     p.add_argument("--start", default="2019-05-08", help="Backtest start date (YYYY-MM-DD). Default is DBMF's inception so all 15 portfolios share the same window.")
-    p.add_argument("--end",   default="2026-05-14", help="Backtest end date (YYYY-MM-DD).")
+    p.add_argument("--end",   default=None, help="Backtest end date (YYYY-MM-DD). Default: latest available trading day in the data.")
     p.add_argument(
         "--backend", choices=["python", "vectorbt"], default="python",
         help="Simulation backend (default: python, ~300x faster than vectorbt at our scale). "
@@ -219,6 +219,15 @@ def run_report(results_path: Path, open_browser: bool):
 def main():
     args = parse_args()
     set_backend(args.backend)
+
+    # Default end = latest available trading day (SPY drives the date axis),
+    # so re-running after a data refresh automatically extends to newest data.
+    if args.end is None:
+        spy_dates = read_lean_daily("SPY", DATA_DIR)
+        if not spy_dates:
+            print(f"  ERROR: no SPY data found in {DATA_DIR}")
+            sys.exit(1)
+        args.end = max(spy_dates)
 
     timestamp  = datetime.now().strftime("%Y%m%d_%H%M%S")
     output_dir = OUTPUT_ROOT / f"{STRATEGY_NAME}-{timestamp}"

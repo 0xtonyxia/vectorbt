@@ -165,6 +165,10 @@ def _fetch(ticker: str,
             if df is not None and len(df) > 0:
                 df = df[["Open", "High", "Low", "Close", "Volume"]].copy()
                 df.index = pd.to_datetime(df.index).tz_localize(None)
+                # Drop incomplete rows (e.g. a provisional trailing session with
+                # NaN OHLC) that would break int conversion in to_lean_csv.
+                df = df.dropna(subset=["Open", "High", "Low", "Close"])
+                df["Volume"] = df["Volume"].fillna(0)
                 df.sort_index(inplace=True)
                 return df
         except Exception as exc:
@@ -185,6 +189,10 @@ def _fetch(ticker: str,
             if df is not None and len(df) > 0:
                 df = df[["Open", "High", "Low", "Close", "Volume"]].copy()
                 df.index = pd.to_datetime(df.index).tz_localize(None)
+                # Drop incomplete rows (e.g. a provisional trailing session with
+                # NaN OHLC) that would break int conversion in to_lean_csv.
+                df = df.dropna(subset=["Open", "High", "Low", "Close"])
+                df["Volume"] = df["Volume"].fillna(0)
                 df.sort_index(inplace=True)
                 return df
         except Exception as exc:
