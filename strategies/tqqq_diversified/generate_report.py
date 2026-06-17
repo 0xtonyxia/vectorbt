@@ -575,13 +575,13 @@ def _build_log_html(label: str, log: list[dict], color: str) -> str:
     <tbody>{"".join(rows)}</tbody>
     </table></div>"""
 
-log_html  = _build_log_html("Timing1-RV20-22%", t1_log, "#d946ef")
-log_html += _build_log_html("Timing1-RV20-25%", t1_25_log, "#a855f7")
-log_html += _build_log_html("Timing1-RV20-20%", t1_20_log, "#ec4899")
-log_html += _build_log_html("Timing1-RV60-22%", t1_rv60_log, "#14b8a6")
-log_html += _build_log_html("Timing2-RV20-22%", t2_log, "#b45309")
-log_html += _build_log_html("Timing2-RV20-25%", t2_25_log, "#92400e")
-log_html += _build_log_html("Timing2-RV20-20%", t2_20_log, "#78350f")
+log_html  = _build_log_html("Timing1-BTAL-RV20-22%", t1_log, "#d946ef")
+log_html += _build_log_html("Timing1-BTAL-RV20-25%", t1_25_log, "#a855f7")
+log_html += _build_log_html("Timing1-BTAL-RV20-20%", t1_20_log, "#ec4899")
+log_html += _build_log_html("Timing1-BTAL-RV60-22%", t1_rv60_log, "#14b8a6")
+log_html += _build_log_html("Timing2-BTAL-22%", t2_log, "#b45309")
+log_html += _build_log_html("Timing2-BTAL-25%", t2_25_log, "#92400e")
+log_html += _build_log_html("Timing2-BTAL-20%", t2_20_log, "#78350f")
 log_html += _build_log_html("Timing1-DBMF-RV20-22%", t1d_22_log, "#3b82f6")
 log_html += _build_log_html("Timing1-DBMF-RV20-25%", t1d_25_log, "#0891b2")
 log_html += _build_log_html("Timing1-DBMF-RV20-20%", t1d_20_log, "#0d9488")
@@ -593,25 +593,29 @@ log_html += _build_log_html("Timing1-DBBT-RV20-20%", t1b_20_log, "#fb7185")
 # Portfolio registry for table/chart generation
 # ---------------------------------------------------------------------------
 _portfolios = [
+    # Benchmarks first
+    {"name": "100% SPY", "color": "#f59e0b", "stats": comp_spy_stats, "eq": comp_spy_eq, "dd": dd_spy, "ann": comp_spy_ann, "dr": 1.0, "bg": ""},
+    {"name": "100% QQQ", "color": "#06b6d4", "stats": comp_qqq_stats, "eq": comp_qqq_eq, "dd": dd_qqq, "ann": comp_qqq_ann, "dr": 1.0, "bg": ""},
+    {"name": "50%BTAL+50%TQQQ", "color": "#22c55e", "stats": comp_bt50_stats, "eq": comp_bt50_eq, "dd": dd_bt50, "ann": comp_bt50_ann, "dr": dr_bt50, "bg": ""},
+    # BTAL family
     {"name": "35tqqq+30btal+15gld+15xlp+5cure", "color": "#7c3aed", "stats": comp_strat_stats, "eq": comp_strat_eq, "dd": dd_strat, "ann": ann_strat, "dr": dr_strat, "bg": "#f5f3ff"},
-    {"name": "Timing1-RV20-22%", "color": "#d946ef", "stats": comp_t1_stats, "eq": comp_t1_eq, "dd": dd_t1, "ann": comp_t1_ann, "dr": 0, "bg": "#fdf4ff"},
-    {"name": "Timing1-RV20-25%", "color": "#a855f7", "stats": comp_t1_25_stats, "eq": comp_t1_25_eq, "dd": dd_t1_25, "ann": comp_t1_25_ann, "dr": 0, "bg": "#faf5ff"},
-    {"name": "Timing1-RV20-20%", "color": "#ec4899", "stats": comp_t1_20_stats, "eq": comp_t1_20_eq, "dd": dd_t1_20, "ann": comp_t1_20_ann, "dr": 0, "bg": "#fdf2f8"},
-    {"name": "Timing1-RV60-22%", "color": "#14b8a6", "stats": comp_t1_rv60_stats, "eq": comp_t1_rv60_eq, "dd": dd_t1_rv60, "ann": comp_t1_rv60_ann, "dr": 0, "bg": "#f0fdfa"},
-    {"name": "Timing2-RV20-22%", "color": "#b45309", "stats": comp_t2_stats, "eq": comp_t2_eq, "dd": dd_t2, "ann": comp_t2_ann, "dr": 0, "bg": "#fef3c7"},
-    {"name": "Timing2-RV20-25%", "color": "#92400e", "stats": comp_t2_25_stats, "eq": comp_t2_25_eq, "dd": dd_t2_25, "ann": comp_t2_25_ann, "dr": 0, "bg": "#fefce8"},
-    {"name": "Timing2-RV20-20%", "color": "#78350f", "stats": comp_t2_20_stats, "eq": comp_t2_20_eq, "dd": dd_t2_20, "ann": comp_t2_20_ann, "dr": 0, "bg": "#fffbeb"},
+    {"name": "Timing1-BTAL-RV20-22%", "color": "#d946ef", "stats": comp_t1_stats, "eq": comp_t1_eq, "dd": dd_t1, "ann": comp_t1_ann, "dr": 0, "bg": "#fdf4ff"},
+    {"name": "Timing1-BTAL-RV20-25%", "color": "#a855f7", "stats": comp_t1_25_stats, "eq": comp_t1_25_eq, "dd": dd_t1_25, "ann": comp_t1_25_ann, "dr": 0, "bg": "#faf5ff"},
+    {"name": "Timing1-BTAL-RV20-20%", "color": "#ec4899", "stats": comp_t1_20_stats, "eq": comp_t1_20_eq, "dd": dd_t1_20, "ann": comp_t1_20_ann, "dr": 0, "bg": "#fdf2f8"},
+    {"name": "Timing1-BTAL-RV60-22%", "color": "#14b8a6", "stats": comp_t1_rv60_stats, "eq": comp_t1_rv60_eq, "dd": dd_t1_rv60, "ann": comp_t1_rv60_ann, "dr": 0, "bg": "#f0fdfa"},
+    {"name": "Timing2-BTAL-22%", "color": "#b45309", "stats": comp_t2_stats, "eq": comp_t2_eq, "dd": dd_t2, "ann": comp_t2_ann, "dr": 0, "bg": "#fef3c7"},
+    {"name": "Timing2-BTAL-25%", "color": "#92400e", "stats": comp_t2_25_stats, "eq": comp_t2_25_eq, "dd": dd_t2_25, "ann": comp_t2_25_ann, "dr": 0, "bg": "#fefce8"},
+    {"name": "Timing2-BTAL-20%", "color": "#78350f", "stats": comp_t2_20_stats, "eq": comp_t2_20_eq, "dd": dd_t2_20, "ann": comp_t2_20_ann, "dr": 0, "bg": "#fffbeb"},
+    # DBMF family
     {"name": "25tqqq+40dbmf+15gld+15xlp+5cure", "color": "#1e40af", "stats": comp_dbmf_strat_stats, "eq": comp_dbmf_strat_eq, "dd": dd_dbmf_strat, "ann": comp_dbmf_strat_ann, "dr": dr_dbmf_strat, "bg": "#dbeafe"},
     {"name": "Timing1-DBMF-RV20-22%", "color": "#3b82f6", "stats": comp_t1d_22_stats, "eq": comp_t1d_22_eq, "dd": dd_t1d_22, "ann": comp_t1d_22_ann, "dr": 0, "bg": "#eff6ff"},
     {"name": "Timing1-DBMF-RV20-25%", "color": "#0891b2", "stats": comp_t1d_25_stats, "eq": comp_t1d_25_eq, "dd": dd_t1d_25, "ann": comp_t1d_25_ann, "dr": 0, "bg": "#cffafe"},
     {"name": "Timing1-DBMF-RV20-20%", "color": "#0d9488", "stats": comp_t1d_20_stats, "eq": comp_t1d_20_eq, "dd": dd_t1d_20, "ann": comp_t1d_20_ann, "dr": 0, "bg": "#ccfbf1"},
+    # DBBT family
     {"name": "30tqqq+20dbmf+15btal+15gld+15xlp+5cure", "color": "#9f1239", "stats": comp_dbbt_strat_stats, "eq": comp_dbbt_strat_eq, "dd": dd_dbbt_strat, "ann": comp_dbbt_strat_ann, "dr": dr_dbbt_strat, "bg": "#ffe4e6"},
     {"name": "Timing1-DBBT-RV20-22%", "color": "#e11d48", "stats": comp_t1b_22_stats, "eq": comp_t1b_22_eq, "dd": dd_t1b_22, "ann": comp_t1b_22_ann, "dr": 0, "bg": "#fff1f2"},
     {"name": "Timing1-DBBT-RV20-25%", "color": "#f43f5e", "stats": comp_t1b_25_stats, "eq": comp_t1b_25_eq, "dd": dd_t1b_25, "ann": comp_t1b_25_ann, "dr": 0, "bg": "#ffe4e6"},
     {"name": "Timing1-DBBT-RV20-20%", "color": "#fb7185", "stats": comp_t1b_20_stats, "eq": comp_t1b_20_eq, "dd": dd_t1b_20, "ann": comp_t1b_20_ann, "dr": 0, "bg": "#fff1f2"},
-    {"name": "100% SPY", "color": "#f59e0b", "stats": comp_spy_stats, "eq": comp_spy_eq, "dd": dd_spy, "ann": comp_spy_ann, "dr": 1.0, "bg": ""},
-    {"name": "100% QQQ", "color": "#06b6d4", "stats": comp_qqq_stats, "eq": comp_qqq_eq, "dd": dd_qqq, "ann": comp_qqq_ann, "dr": 1.0, "bg": ""},
-    {"name": "50%BTAL+50%TQQQ", "color": "#22c55e", "stats": comp_bt50_stats, "eq": comp_bt50_eq, "dd": dd_bt50, "ann": comp_bt50_ann, "dr": dr_bt50, "bg": ""},
 ]
 
 def _build_stats_table_rows():
@@ -730,6 +734,13 @@ body{{font-family:'Inter',system-ui,-apple-system,sans-serif;background:#f8fafc;
 
 /* ── Info icon tooltip ─────────────────────────────────── */
 .info-icon{{cursor:help;color:#94a3b8;font-size:.85em;position:relative;display:inline-block;margin-left:3px}}
+
+/* ── Legend bulk toggle buttons ──────────────────────────── */
+.legend-btn{{font-size:.7rem;font-weight:500;color:#475569;background:#fff;border:1px solid #cbd5e1;
+  padding:3px 10px;border-radius:6px;cursor:pointer;transition:all .12s;font-family:inherit}}
+.legend-btn:hover{{background:#f1f5f9;border-color:#94a3b8;color:#0f172a}}
+.legend-btn:active{{background:#e2e8f0}}
+.chart-tools{{margin-left:auto;display:flex;gap:6px;align-items:center}}
 .info-icon:hover{{color:#6366f1}}
 .info-icon:hover::after{{content:attr(title);position:absolute;bottom:120%;left:50%;transform:translateX(-50%);
   background:#1e293b;color:#f1f5f9;padding:4px 10px;border-radius:6px;font-size:.75rem;white-space:nowrap;
@@ -762,8 +773,7 @@ body{{font-family:'Inter',system-ui,-apple-system,sans-serif;background:#f8fafc;
     </div>
   </div>
   <div class="sub">
-    <span class="badge badge-purple">35% TQQQ + 30% BTAL + 15% GLD + 15% XLP + 5% CURE</span>
-    <span class="badge badge-green">Annual Rebalance</span>
+    <span class="badge badge-purple">Hedged TQQQ portfolios — BTAL / DBMF / DBBT bases × annual rebalance × optional monthly RV20 TQQQ↔QQQ swap</span>
   </div>
 </div>
 
@@ -815,17 +825,26 @@ body{{font-family:'Inter',system-ui,-apple-system,sans-serif;background:#f8fafc;
      ═══════════════════════════════════════════════════════ -->
 <div class="panel active" id="p0">
   <div class="section-title">Performance
-    <label style="font-size:.75rem;font-weight:400;color:#64748b;margin-left:auto;cursor:pointer;display:flex;align-items:center;gap:4px">
-      <input type="checkbox" id="logToggle" onchange="toggleLog()"> Logarithmic scale
-    </label>
+    <div class="chart-tools">
+      <button class="legend-btn" onclick="toggleAllLegend('ch-equity', true)">Show all</button>
+      <button class="legend-btn" onclick="toggleAllLegend('ch-equity', false)">Hide all</button>
+      <label style="font-size:.75rem;font-weight:400;color:#64748b;cursor:pointer;display:flex;align-items:center;gap:4px;margin-left:6px">
+        <input type="checkbox" id="logToggle" onchange="toggleLog()"> Logarithmic scale
+      </label>
+    </div>
   </div>
-  <div class="card"><div id="ch-equity" style="height:420px"></div></div>
+  <div class="card"><div id="ch-equity" style="height:600px"></div></div>
 
-  <div class="section-title">Drawdown</div>
-  <div class="card"><div id="ch-dd-summary" style="height:280px"></div></div>
+  <div class="section-title">Drawdown
+    <div class="chart-tools">
+      <button class="legend-btn" onclick="toggleAllLegend('ch-dd-summary', true)">Show all</button>
+      <button class="legend-btn" onclick="toggleAllLegend('ch-dd-summary', false)">Hide all</button>
+    </div>
+  </div>
+  <div class="card"><div id="ch-dd-summary" style="height:400px"></div></div>
 
   <div class="section-title">Annual Returns Bar Chart</div>
-  <div class="card"><div id="ch-ann-bar" style="height:300px"></div></div>
+  <div class="card"><div id="ch-ann-bar" style="height:400px"></div></div>
 </div>
 
 <!-- ═══════════════════════════════════════════════════════
@@ -871,8 +890,13 @@ body{{font-family:'Inter',system-ui,-apple-system,sans-serif;background:#f8fafc;
      DRAWDOWN
      ═══════════════════════════════════════════════════════ -->
 <div class="panel" id="p3">
-  <div class="section-title">Equity Drawdown</div>
-  <div class="card"><div id="ch-dd-full" style="height:400px"></div></div>
+  <div class="section-title">Equity Drawdown
+    <div class="chart-tools">
+      <button class="legend-btn" onclick="toggleAllLegend('ch-dd-full', true)">Show all</button>
+      <button class="legend-btn" onclick="toggleAllLegend('ch-dd-full', false)">Hide all</button>
+    </div>
+  </div>
+  <div class="card"><div id="ch-dd-full" style="height:560px"></div></div>
 
   <div class="section-title">Underwater Plot (Rolling Returns %)</div>
   <div class="card"><div id="ch-rolling" style="height:300px"></div></div>
@@ -904,8 +928,8 @@ const L = {{
   font:{{family:'Inter,system-ui,sans-serif',color:'#475569',size:12}},
   xaxis:{{gridcolor:'#f1f5f9',zeroline:false,linecolor:'#e2e8f0'}},
   yaxis:{{gridcolor:'#f1f5f9',zeroline:false,linecolor:'#e2e8f0',title:{{standoff:20}}}},
-  legend:{{bgcolor:'transparent',bordercolor:'transparent',orientation:'h',y:1.14,x:0.5,xanchor:'center'}},
-  margin:{{t:50,r:20,b:50,l:90}},
+  legend:{{bgcolor:'transparent',bordercolor:'transparent',orientation:'h',y:1.20,yanchor:'top',x:0.5,xanchor:'center'}},
+  margin:{{t:115,r:20,b:50,l:90}},
 }};
 // Layout for charts with custom sorted hover:
 // hovermode:'x' fires plotly_hover with ALL traces at cursor x position.
@@ -938,19 +962,25 @@ function setupSortedHover(chartId) {{
     chartDiv.parentElement.appendChild(spikeLine);
   }}
 
-  const plotArea = chartDiv.querySelector('.nsewdrag') || chartDiv.querySelector('.draglayer');
-
   function onMove(e) {{
     const layout = chartDiv._fullLayout;
     if (!layout || !layout.xaxis) return;
     const xa = layout.xaxis;
-    const rect = chartDiv.querySelector('.plotarea,.nsewdrag')?.getBoundingClientRect()
-              || chartDiv.getBoundingClientRect();
-    const mouseX = e.clientX - rect.left;
-    if (mouseX < 0 || mouseX > rect.width) {{ hoverDiv.style.display='none'; spikeLine.style.display='none'; return; }}
 
-    // Convert pixel to date using Plotly axis
-    const xVal = xa.p2d(mouseX + (xa._offset || 0));
+    // IMPORTANT: Plotly's xa.p2d / xa.r2p use PLOT-AREA-relative pixels
+    // (0 = data start at xa._offset px from chart-container left, xa._length = data end).
+    // Verified empirically: r2p('2019-05-08') = 0, r2p('2026-05-14') = xa._length.
+    const chartRect = chartDiv.getBoundingClientRect();
+    const xOff  = xa._offset || 0;
+    const xLen  = xa._length || (chartRect.width - xOff - 20);
+    const mouseInChart = e.clientX - chartRect.left;
+    const mouseInPlot  = mouseInChart - xOff;               // 0 .. xLen for valid cursor
+    if (mouseInPlot < 0 || mouseInPlot > xLen) {{
+      hoverDiv.style.display='none'; spikeLine.style.display='none'; return;
+    }}
+
+    // Convert plot-area pixel to date.
+    const xVal = xa.p2d(mouseInPlot);
     if (!xVal) {{ hoverDiv.style.display='none'; return; }}
     const dateStr = typeof xVal === 'string' ? xVal : xVal.substring?.(0,10) || '';
 
@@ -997,11 +1027,19 @@ function setupSortedHover(chartId) {{
     hoverDiv.style.left = left + 'px';
     hoverDiv.style.top = Math.max(0, e.clientY - cRect.top - 20) + 'px';
 
-    // Spike line
+    // Spike line — anchor at the closest data point's pixel, span just the plot area.
+    // xa.r2p returns plot-area-relative px, so add xa._offset for chart-container px.
     const pRect = chartDiv.parentElement.getBoundingClientRect();
-    spikeLine.style.left = (e.clientX - pRect.left) + 'px';
-    spikeLine.style.height = rect.height + 'px';
-    spikeLine.style.top = (rect.top - pRect.top) + 'px';
+    let pxInPlot;
+    try {{
+      pxInPlot = xa.r2p ? xa.r2p(closestDate)
+                        : (typeof xa.d2c === 'function' ? xa.c2p(xa.d2c(closestDate)) : mouseInPlot);
+    }} catch (err) {{ pxInPlot = mouseInPlot; }}
+    const pxInChart = xOff + pxInPlot;
+    const ya = layout.yaxis || {{}};
+    spikeLine.style.left = ((chartRect.left - pRect.left) + pxInChart) + 'px';
+    spikeLine.style.height = (ya._length || chartRect.height) + 'px';
+    spikeLine.style.top = ((chartRect.top - pRect.top) + (ya._offset || 0)) + 'px';
     spikeLine.style.display = 'block';
   }}
 
@@ -1059,11 +1097,12 @@ let _ddUpdating=false;
 function updateDDAnnotations() {{
   if(_ddUpdating) return;
   _ddUpdating=true;
-  // Use the CURRENT chart data (which may be rebased)
+  // Use the CURRENT chart data of the MAIN strategy (DBBT-Base)
   const eqDiv=document.getElementById('ch-equity');
-  if(!eqDiv||!eqDiv.data||!eqDiv.data[0]) {{ _ddUpdating=false; return; }}
-  const dates=eqDiv.data[0].x;
-  const vals=eqDiv.data[0].y;
+  if(!eqDiv||!eqDiv.data||!eqDiv.data.length) {{ _ddUpdating=false; return; }}
+  const mainTrace = eqDiv.data.find(t => t.name === 'DBBT-Base') || eqDiv.data[0];
+  const dates=mainTrace.x;
+  const vals=mainTrace.y;
   const s=computeDDSpans(dates,vals,0,vals.length-1);
   Plotly.relayout('ch-equity',{{
     shapes:[
@@ -1090,6 +1129,42 @@ function toggleLog(){{
   Plotly.relayout('ch-equity',{{'yaxis.type':isLog?'log':'linear'}});
 }}
 
+function toggleAllLegend(chartId, visible) {{
+  const div = document.getElementById(chartId);
+  if (!div || !div.data) return;
+  const v = visible ? true : 'legendonly';
+  const visArr = new Array(div.data.length).fill(v);
+  Plotly.restyle(chartId, {{visible: visArr}});
+}}
+
+/* ── Native zoom → rebase to $100K at new start ──────────────
+   When the user drags-to-zoom on a chart, Plotly only changes the visible
+   range. We hook plotly_relayout to detect that and re-run recalcAll so
+   every curve is rebased to $100K at the new range's start (matching what
+   the Apply / Quick Range form does). _zoomRebasing guard prevents the
+   relayout fired by our own Plotly.react inside recalcAll from re-entering. */
+let _zoomRebasing = false;
+function setupZoomRebase(chartId) {{
+  const div = document.getElementById(chartId);
+  if (!div || !div.on) return;
+  div.on('plotly_relayout', (e) => {{
+    if (_zoomRebasing) return;
+    const r0 = e['xaxis.range[0]'];
+    const r1 = e['xaxis.range[1]'];
+    if (r0 === undefined || r1 === undefined) return;   // ignore non-user-zoom events
+    const d0 = String(r0).slice(0, 10);
+    const d1 = String(r1).slice(0, 10);
+    document.getElementById('dateFrom').value = d0;
+    document.getElementById('dateTo').value = d1;
+    document.getElementById('quickRange').value = '';
+    _zoomRebasing = true;
+    try {{ recalcAll(d0, d1); }} finally {{
+      // Release on next tick so Plotly.react's own relayout (autorange:true) finishes first
+      setTimeout(() => {{ _zoomRebasing = false; }}, 0);
+    }}
+  }});
+}}
+
 /* ── Lazy chart rendering (only render when tab first shown) ── */
 const rendered = new Set();
 const ddRange = {_dd_range_json};
@@ -1100,66 +1175,68 @@ function renderChart(id) {{
 
   if(id==='ch-equity') {{
     Plotly.newPlot('ch-equity',[
-      {{x:D,y:V_strat,name:'Strategy',type:'scatter',mode:'lines',line:{{color:'#7c3aed',width:2.5}}}},
       {{x:D,y:V_spy,name:'100% SPY',type:'scatter',mode:'lines',line:{{color:'#f59e0b',width:1.5}}}},
       {{x:D,y:V_qqq,name:'100% QQQ',type:'scatter',mode:'lines',line:{{color:'#06b6d4',width:1.5}}}},
       {{x:D,y:V_bt50,name:'50%BTAL+50%TQQQ',type:'scatter',mode:'lines',line:{{color:'#22c55e',width:1.5}}}},
-      {{x:D,y:V_t1,name:'T1-RV20-22%',type:'scatter',mode:'lines',line:{{color:'#d946ef',width:1.5}}}},
-      {{x:D,y:V_t1_25,name:'T1-RV20-25%',type:'scatter',mode:'lines',line:{{color:'#a855f7',width:1}}}},
-      {{x:D,y:V_t1_20,name:'T1-RV20-20%',type:'scatter',mode:'lines',line:{{color:'#ec4899',width:1}}}},
-      {{x:D,y:V_t1_rv60,name:'T1-RV60-22%',type:'scatter',mode:'lines',line:{{color:'#14b8a6',width:1.5}}}},
-      {{x:D,y:V_t2,name:'T2-22%',type:'scatter',mode:'lines',line:{{color:'#b45309',width:1.5}}}},
-      {{x:D,y:V_t2_25,name:'T2-25%',type:'scatter',mode:'lines',line:{{color:'#92400e',width:1}}}},
-      {{x:D,y:V_t2_20,name:'T2-20%',type:'scatter',mode:'lines',line:{{color:'#78350f',width:1}}}},
+      {{x:D,y:V_strat,name:'BTAL-Base',type:'scatter',mode:'lines',line:{{color:'#7c3aed',width:2}}}},
+      {{x:D,y:V_t1,name:'T1-BTAL-22%',type:'scatter',mode:'lines',line:{{color:'#d946ef',width:1.5}}}},
+      {{x:D,y:V_t1_25,name:'T1-BTAL-25%',type:'scatter',mode:'lines',line:{{color:'#a855f7',width:1}}}},
+      {{x:D,y:V_t1_20,name:'T1-BTAL-20%',type:'scatter',mode:'lines',line:{{color:'#ec4899',width:1}}}},
+      {{x:D,y:V_t1_rv60,name:'T1-BTAL-RV60-22%',type:'scatter',mode:'lines',line:{{color:'#14b8a6',width:1.5}}}},
+      {{x:D,y:V_t2,name:'T2-BTAL-22%',type:'scatter',mode:'lines',line:{{color:'#b45309',width:1.5}}}},
+      {{x:D,y:V_t2_25,name:'T2-BTAL-25%',type:'scatter',mode:'lines',line:{{color:'#92400e',width:1}}}},
+      {{x:D,y:V_t2_20,name:'T2-BTAL-20%',type:'scatter',mode:'lines',line:{{color:'#78350f',width:1}}}},
       {{x:D,y:V_dbmf_strat,name:'DBMF-Base',type:'scatter',mode:'lines',line:{{color:'#1e40af',width:2}}}},
       {{x:D,y:V_t1d_22,name:'T1-DBMF-22%',type:'scatter',mode:'lines',line:{{color:'#3b82f6',width:1.5}}}},
       {{x:D,y:V_t1d_25,name:'T1-DBMF-25%',type:'scatter',mode:'lines',line:{{color:'#0891b2',width:1.5}}}},
       {{x:D,y:V_t1d_20,name:'T1-DBMF-20%',type:'scatter',mode:'lines',line:{{color:'#0d9488',width:1.5}}}},
-      {{x:D,y:V_dbbt_strat,name:'DBBT-Base',type:'scatter',mode:'lines',line:{{color:'#9f1239',width:2}}}},
+      {{x:D,y:V_dbbt_strat,name:'DBBT-Base',type:'scatter',mode:'lines',line:{{color:'#9f1239',width:2.5}}}},
       {{x:D,y:V_t1b_22,name:'T1-DBBT-22%',type:'scatter',mode:'lines',line:{{color:'#e11d48',width:1.5}}}},
       {{x:D,y:V_t1b_25,name:'T1-DBBT-25%',type:'scatter',mode:'lines',line:{{color:'#f43f5e',width:1.5}}}},
       {{x:D,y:V_t1b_20,name:'T1-DBBT-20%',type:'scatter',mode:'lines',line:{{color:'#fb7185',width:1.5}}}},
     ],{{...L_custom,yaxis:{{...L_custom.yaxis,title:'Portfolio Value ($)',tickformat:'$,.0f'}}}},C);
     setupSortedHover('ch-equity');
+    setupZoomRebase('ch-equity');
     updateDDAnnotations();
   }}
   else if(id==='ch-dd-summary') {{
     Plotly.newPlot('ch-dd-summary',[
-      {{x:D,y:DD_strat,name:'Strategy',type:'scatter',mode:'lines',line:{{color:'#7c3aed',width:1.5}},fill:'tozeroy',fillcolor:'rgba(124,58,237,0.08)'}},
       {{x:D,y:DD_spy,name:'100% SPY',type:'scatter',mode:'lines',line:{{color:'#f59e0b',width:1}}}},
       {{x:D,y:DD_qqq,name:'100% QQQ',type:'scatter',mode:'lines',line:{{color:'#06b6d4',width:1}}}},
       {{x:D,y:DD_bt50,name:'50%BTAL+50%TQQQ',type:'scatter',mode:'lines',line:{{color:'#22c55e',width:1}}}},
-      {{x:D,y:DD_t1,name:'T1-22%',type:'scatter',mode:'lines',line:{{color:'#d946ef',width:1}}}},
-      {{x:D,y:DD_t1_25,name:'T1-25%',type:'scatter',mode:'lines',line:{{color:'#a855f7',width:1}}}},
-      {{x:D,y:DD_t1_20,name:'T1-20%',type:'scatter',mode:'lines',line:{{color:'#ec4899',width:1}}}},
-      {{x:D,y:DD_t1_rv60,name:'T1-RV60',type:'scatter',mode:'lines',line:{{color:'#14b8a6',width:1}}}},
-      {{x:D,y:DD_t2,name:'T2-22%',type:'scatter',mode:'lines',line:{{color:'#b45309',width:1}}}},
-      {{x:D,y:DD_t2_25,name:'T2-25%',type:'scatter',mode:'lines',line:{{color:'#92400e',width:1}}}},
-      {{x:D,y:DD_t2_20,name:'T2-20%',type:'scatter',mode:'lines',line:{{color:'#78350f',width:1}}}},
+      {{x:D,y:DD_strat,name:'BTAL-Base',type:'scatter',mode:'lines',line:{{color:'#7c3aed',width:1.5}}}},
+      {{x:D,y:DD_t1,name:'T1-BTAL-22%',type:'scatter',mode:'lines',line:{{color:'#d946ef',width:1}}}},
+      {{x:D,y:DD_t1_25,name:'T1-BTAL-25%',type:'scatter',mode:'lines',line:{{color:'#a855f7',width:1}}}},
+      {{x:D,y:DD_t1_20,name:'T1-BTAL-20%',type:'scatter',mode:'lines',line:{{color:'#ec4899',width:1}}}},
+      {{x:D,y:DD_t1_rv60,name:'T1-BTAL-RV60-22%',type:'scatter',mode:'lines',line:{{color:'#14b8a6',width:1}}}},
+      {{x:D,y:DD_t2,name:'T2-BTAL-22%',type:'scatter',mode:'lines',line:{{color:'#b45309',width:1}}}},
+      {{x:D,y:DD_t2_25,name:'T2-BTAL-25%',type:'scatter',mode:'lines',line:{{color:'#92400e',width:1}}}},
+      {{x:D,y:DD_t2_20,name:'T2-BTAL-20%',type:'scatter',mode:'lines',line:{{color:'#78350f',width:1}}}},
       {{x:D,y:DD_dbmf_strat,name:'DBMF-Base',type:'scatter',mode:'lines',line:{{color:'#1e40af',width:1.5}}}},
       {{x:D,y:DD_t1d_22,name:'T1-DBMF-22%',type:'scatter',mode:'lines',line:{{color:'#3b82f6',width:1}}}},
       {{x:D,y:DD_t1d_25,name:'T1-DBMF-25%',type:'scatter',mode:'lines',line:{{color:'#0891b2',width:1}}}},
       {{x:D,y:DD_t1d_20,name:'T1-DBMF-20%',type:'scatter',mode:'lines',line:{{color:'#0d9488',width:1}}}},
-      {{x:D,y:DD_dbbt_strat,name:'DBBT-Base',type:'scatter',mode:'lines',line:{{color:'#9f1239',width:1.5}}}},
+      {{x:D,y:DD_dbbt_strat,name:'DBBT-Base',type:'scatter',mode:'lines',line:{{color:'#9f1239',width:2}},fill:'tozeroy',fillcolor:'rgba(159,18,57,0.08)'}},
       {{x:D,y:DD_t1b_22,name:'T1-DBBT-22%',type:'scatter',mode:'lines',line:{{color:'#e11d48',width:1}}}},
       {{x:D,y:DD_t1b_25,name:'T1-DBBT-25%',type:'scatter',mode:'lines',line:{{color:'#f43f5e',width:1}}}},
       {{x:D,y:DD_t1b_20,name:'T1-DBBT-20%',type:'scatter',mode:'lines',line:{{color:'#fb7185',width:1}}}},
-    ],{{...L_custom,yaxis:{{...L_custom.yaxis,title:'Drawdown',tickformat:'.1f',ticksuffix:'%',range:ddRange}},margin:{{t:50,r:20,b:40,l:90}}}},C);
+    ],{{...L_custom,yaxis:{{...L_custom.yaxis,title:'Drawdown',tickformat:'.1f',ticksuffix:'%',range:ddRange}},margin:{{t:115,r:20,b:40,l:90}}}},C);
     setupSortedHover('ch-dd-summary');
+    setupZoomRebase('ch-dd-summary');
   }}
   else if(id==='ch-ann-bar') {{
     Plotly.newPlot('ch-ann-bar',[
       {{x:{j(ann_years)},y:{j(comp_spy_ann)},name:'100% SPY',type:'bar',marker:{{color:'#f59e0b'}},hovertemplate:'%{{y:.1f}}%<extra>%{{fullData.name}}</extra>'}},
       {{x:{j(ann_years)},y:{j(comp_qqq_ann)},name:'100% QQQ',type:'bar',marker:{{color:'#06b6d4'}},hovertemplate:'%{{y:.1f}}%<extra>%{{fullData.name}}</extra>'}},
-      {{x:{j(ann_years)},y:{j(ann_strat)},name:'Strategy',type:'bar',marker:{{color:'#7c3aed'}},hovertemplate:'%{{y:.1f}}%<extra>%{{fullData.name}}</extra>'}},
-      {{x:{j(ann_years)},y:{j(comp_t1_25_ann)},name:'T1-RV20-25%',type:'bar',marker:{{color:'#a855f7'}},hovertemplate:'%{{y:.1f}}%<extra>%{{fullData.name}}</extra>'}},
-      {{x:{j(ann_years)},y:{j(comp_t2_25_ann)},name:'T2-RV20-25%',type:'bar',marker:{{color:'#92400e'}},hovertemplate:'%{{y:.1f}}%<extra>%{{fullData.name}}</extra>'}},
-      {{x:{j(ann_years)},y:{j(comp_t1_ann)},name:'T1-RV20-22%',type:'bar',marker:{{color:'#d946ef'}},hovertemplate:'%{{y:.1f}}%<extra>%{{fullData.name}}</extra>',visible:'legendonly'}},
-      {{x:{j(ann_years)},y:{j(comp_t1_20_ann)},name:'T1-RV20-20%',type:'bar',marker:{{color:'#ec4899'}},hovertemplate:'%{{y:.1f}}%<extra>%{{fullData.name}}</extra>',visible:'legendonly'}},
-      {{x:{j(ann_years)},y:{j(comp_t1_rv60_ann)},name:'T1-RV60-22%',type:'bar',marker:{{color:'#14b8a6'}},hovertemplate:'%{{y:.1f}}%<extra>%{{fullData.name}}</extra>',visible:'legendonly'}},
-      {{x:{j(ann_years)},y:{j(comp_t2_ann)},name:'T2-RV20-22%',type:'bar',marker:{{color:'#b45309'}},hovertemplate:'%{{y:.1f}}%<extra>%{{fullData.name}}</extra>',visible:'legendonly'}},
-      {{x:{j(ann_years)},y:{j(comp_t2_20_ann)},name:'T2-RV20-20%',type:'bar',marker:{{color:'#78350f'}},hovertemplate:'%{{y:.1f}}%<extra>%{{fullData.name}}</extra>',visible:'legendonly'}},
       {{x:{j(ann_years)},y:{j(comp_bt50_ann)},name:'50%BTAL+50%TQQQ',type:'bar',marker:{{color:'#22c55e'}},hovertemplate:'%{{y:.1f}}%<extra>%{{fullData.name}}</extra>',visible:'legendonly'}},
+      {{x:{j(ann_years)},y:{j(ann_strat)},name:'BTAL-Base',type:'bar',marker:{{color:'#7c3aed'}},hovertemplate:'%{{y:.1f}}%<extra>%{{fullData.name}}</extra>'}},
+      {{x:{j(ann_years)},y:{j(comp_t1_25_ann)},name:'T1-BTAL-25%',type:'bar',marker:{{color:'#a855f7'}},hovertemplate:'%{{y:.1f}}%<extra>%{{fullData.name}}</extra>'}},
+      {{x:{j(ann_years)},y:{j(comp_t1_ann)},name:'T1-BTAL-22%',type:'bar',marker:{{color:'#d946ef'}},hovertemplate:'%{{y:.1f}}%<extra>%{{fullData.name}}</extra>',visible:'legendonly'}},
+      {{x:{j(ann_years)},y:{j(comp_t1_20_ann)},name:'T1-BTAL-20%',type:'bar',marker:{{color:'#ec4899'}},hovertemplate:'%{{y:.1f}}%<extra>%{{fullData.name}}</extra>',visible:'legendonly'}},
+      {{x:{j(ann_years)},y:{j(comp_t1_rv60_ann)},name:'T1-BTAL-RV60-22%',type:'bar',marker:{{color:'#14b8a6'}},hovertemplate:'%{{y:.1f}}%<extra>%{{fullData.name}}</extra>',visible:'legendonly'}},
+      {{x:{j(ann_years)},y:{j(comp_t2_25_ann)},name:'T2-BTAL-25%',type:'bar',marker:{{color:'#92400e'}},hovertemplate:'%{{y:.1f}}%<extra>%{{fullData.name}}</extra>'}},
+      {{x:{j(ann_years)},y:{j(comp_t2_ann)},name:'T2-BTAL-22%',type:'bar',marker:{{color:'#b45309'}},hovertemplate:'%{{y:.1f}}%<extra>%{{fullData.name}}</extra>',visible:'legendonly'}},
+      {{x:{j(ann_years)},y:{j(comp_t2_20_ann)},name:'T2-BTAL-20%',type:'bar',marker:{{color:'#78350f'}},hovertemplate:'%{{y:.1f}}%<extra>%{{fullData.name}}</extra>',visible:'legendonly'}},
       {{x:{j(ann_years)},y:{j(comp_dbmf_strat_ann)},name:'DBMF-Base',type:'bar',marker:{{color:'#1e40af'}},hovertemplate:'%{{y:.1f}}%<extra>%{{fullData.name}}</extra>'}},
       {{x:{j(ann_years)},y:{j(comp_t1d_25_ann)},name:'T1-DBMF-25%',type:'bar',marker:{{color:'#0891b2'}},hovertemplate:'%{{y:.1f}}%<extra>%{{fullData.name}}</extra>'}},
       {{x:{j(ann_years)},y:{j(comp_t1d_22_ann)},name:'T1-DBMF-22%',type:'bar',marker:{{color:'#3b82f6'}},hovertemplate:'%{{y:.1f}}%<extra>%{{fullData.name}}</extra>',visible:'legendonly'}},
@@ -1168,37 +1245,38 @@ function renderChart(id) {{
       {{x:{j(ann_years)},y:{j(comp_t1b_25_ann)},name:'T1-DBBT-25%',type:'bar',marker:{{color:'#f43f5e'}},hovertemplate:'%{{y:.1f}}%<extra>%{{fullData.name}}</extra>'}},
       {{x:{j(ann_years)},y:{j(comp_t1b_22_ann)},name:'T1-DBBT-22%',type:'bar',marker:{{color:'#e11d48'}},hovertemplate:'%{{y:.1f}}%<extra>%{{fullData.name}}</extra>',visible:'legendonly'}},
       {{x:{j(ann_years)},y:{j(comp_t1b_20_ann)},name:'T1-DBBT-20%',type:'bar',marker:{{color:'#fb7185'}},hovertemplate:'%{{y:.1f}}%<extra>%{{fullData.name}}</extra>',visible:'legendonly'}},
-    ],{{...L_native,barmode:'group',yaxis:{{...L_native.yaxis,title:'Return (%)',ticksuffix:'%'}},margin:{{t:50,r:20,b:50,l:90}}}},C);
+    ],{{...L_native,barmode:'group',yaxis:{{...L_native.yaxis,title:'Return (%)',ticksuffix:'%'}},margin:{{t:115,r:20,b:50,l:90}}}},C);
   }}
   else if(id==='ch-hist') {{
     Plotly.newPlot('ch-hist',[
-      {{x:{j(ann_strat)},type:'histogram',name:'Strategy',marker:{{color:'#7c3aed'}},xbins:{{size:5}},opacity:0.8}},
+      {{x:{j(ann_strat)},type:'histogram',name:'BTAL-Base',marker:{{color:'#7c3aed'}},xbins:{{size:5}},opacity:0.8}},
       {{x:{j(ann_bm)},type:'histogram',name:'S&P 500',marker:{{color:'#f59e0b'}},xbins:{{size:5}},opacity:0.6}},
     ],{{...L_native,barmode:'overlay',xaxis:{{...L_native.xaxis,title:'Annual Return (%)'}},yaxis:{{...L_native.yaxis,title:'Frequency'}}}},C);
   }}
   else if(id==='ch-dd-full') {{
     Plotly.newPlot('ch-dd-full',[
-      {{x:D,y:DD_strat,name:'Strategy',type:'scatter',mode:'lines',line:{{color:'#7c3aed',width:1.5}},fill:'tozeroy',fillcolor:'rgba(124,58,237,0.08)'}},
       {{x:D,y:DD_spy,name:'100% SPY',type:'scatter',mode:'lines',line:{{color:'#f59e0b',width:1}}}},
       {{x:D,y:DD_qqq,name:'100% QQQ',type:'scatter',mode:'lines',line:{{color:'#06b6d4',width:1}}}},
       {{x:D,y:DD_bt50,name:'50%BTAL+50%TQQQ',type:'scatter',mode:'lines',line:{{color:'#22c55e',width:1}}}},
-      {{x:D,y:DD_t1,name:'T1-22%',type:'scatter',mode:'lines',line:{{color:'#d946ef',width:1}}}},
-      {{x:D,y:DD_t1_25,name:'T1-25%',type:'scatter',mode:'lines',line:{{color:'#a855f7',width:1}}}},
-      {{x:D,y:DD_t1_20,name:'T1-20%',type:'scatter',mode:'lines',line:{{color:'#ec4899',width:1}}}},
-      {{x:D,y:DD_t1_rv60,name:'T1-RV60',type:'scatter',mode:'lines',line:{{color:'#14b8a6',width:1}}}},
-      {{x:D,y:DD_t2,name:'T2-22%',type:'scatter',mode:'lines',line:{{color:'#b45309',width:1}}}},
-      {{x:D,y:DD_t2_25,name:'T2-25%',type:'scatter',mode:'lines',line:{{color:'#92400e',width:1}}}},
-      {{x:D,y:DD_t2_20,name:'T2-20%',type:'scatter',mode:'lines',line:{{color:'#78350f',width:1}}}},
+      {{x:D,y:DD_strat,name:'BTAL-Base',type:'scatter',mode:'lines',line:{{color:'#7c3aed',width:1.5}}}},
+      {{x:D,y:DD_t1,name:'T1-BTAL-22%',type:'scatter',mode:'lines',line:{{color:'#d946ef',width:1}}}},
+      {{x:D,y:DD_t1_25,name:'T1-BTAL-25%',type:'scatter',mode:'lines',line:{{color:'#a855f7',width:1}}}},
+      {{x:D,y:DD_t1_20,name:'T1-BTAL-20%',type:'scatter',mode:'lines',line:{{color:'#ec4899',width:1}}}},
+      {{x:D,y:DD_t1_rv60,name:'T1-BTAL-RV60-22%',type:'scatter',mode:'lines',line:{{color:'#14b8a6',width:1}}}},
+      {{x:D,y:DD_t2,name:'T2-BTAL-22%',type:'scatter',mode:'lines',line:{{color:'#b45309',width:1}}}},
+      {{x:D,y:DD_t2_25,name:'T2-BTAL-25%',type:'scatter',mode:'lines',line:{{color:'#92400e',width:1}}}},
+      {{x:D,y:DD_t2_20,name:'T2-BTAL-20%',type:'scatter',mode:'lines',line:{{color:'#78350f',width:1}}}},
       {{x:D,y:DD_dbmf_strat,name:'DBMF-Base',type:'scatter',mode:'lines',line:{{color:'#1e40af',width:1.5}}}},
       {{x:D,y:DD_t1d_22,name:'T1-DBMF-22%',type:'scatter',mode:'lines',line:{{color:'#3b82f6',width:1}}}},
       {{x:D,y:DD_t1d_25,name:'T1-DBMF-25%',type:'scatter',mode:'lines',line:{{color:'#0891b2',width:1}}}},
       {{x:D,y:DD_t1d_20,name:'T1-DBMF-20%',type:'scatter',mode:'lines',line:{{color:'#0d9488',width:1}}}},
-      {{x:D,y:DD_dbbt_strat,name:'DBBT-Base',type:'scatter',mode:'lines',line:{{color:'#9f1239',width:1.5}}}},
+      {{x:D,y:DD_dbbt_strat,name:'DBBT-Base',type:'scatter',mode:'lines',line:{{color:'#9f1239',width:2}},fill:'tozeroy',fillcolor:'rgba(159,18,57,0.08)'}},
       {{x:D,y:DD_t1b_22,name:'T1-DBBT-22%',type:'scatter',mode:'lines',line:{{color:'#e11d48',width:1}}}},
       {{x:D,y:DD_t1b_25,name:'T1-DBBT-25%',type:'scatter',mode:'lines',line:{{color:'#f43f5e',width:1}}}},
       {{x:D,y:DD_t1b_20,name:'T1-DBBT-20%',type:'scatter',mode:'lines',line:{{color:'#fb7185',width:1}}}},
     ],{{...L_custom,yaxis:{{...L_custom.yaxis,title:'Drawdown',tickformat:'.1f',ticksuffix:'%',range:ddRange}}}},C);
     setupSortedHover('ch-dd-full');
+    setupZoomRebase('ch-dd-full');
   }}
   else if(id==='ch-rolling') {{
     const ma=[];
@@ -1253,25 +1331,29 @@ requestAnimationFrame(()=>{{ (tabCharts[0]||[]).forEach(renderChart); }});
 
 const ALL_D = D;  // full date array reference
 const PORTFOLIOS = [
+  // Benchmarks first
+  {{name:'100% SPY',color:'#f59e0b',eq:V_spy,dd:DD_spy,bg:'',dr:1}},
+  {{name:'100% QQQ',color:'#06b6d4',eq:V_qqq,dd:DD_qqq,bg:'',dr:1}},
+  {{name:'50%BTAL+50%TQQQ',color:'#22c55e',eq:V_bt50,dd:DD_bt50,bg:'',dr:{f'{dr_bt50:.2f}'} }},
+  // BTAL family
   {{name:'35tqqq+30btal+15gld+15xlp+5cure',color:'#7c3aed',eq:V_strat,dd:DD_strat,bg:'#f5f3ff',dr:{f'{dr_strat:.2f}'} }},
-  {{name:'Timing1-RV20-22%',color:'#d946ef',eq:V_t1,dd:DD_t1,bg:'#fdf4ff',dr:0}},
-  {{name:'Timing1-RV20-25%',color:'#a855f7',eq:V_t1_25,dd:DD_t1_25,bg:'#faf5ff',dr:0}},
-  {{name:'Timing1-RV20-20%',color:'#ec4899',eq:V_t1_20,dd:DD_t1_20,bg:'#fdf2f8',dr:0}},
-  {{name:'Timing1-RV60-22%',color:'#14b8a6',eq:V_t1_rv60,dd:DD_t1_rv60,bg:'#f0fdfa',dr:0}},
-  {{name:'Timing2-RV20-22%',color:'#b45309',eq:V_t2,dd:DD_t2,bg:'#fef3c7',dr:0}},
-  {{name:'Timing2-RV20-25%',color:'#92400e',eq:V_t2_25,dd:DD_t2_25,bg:'#fefce8',dr:0}},
-  {{name:'Timing2-RV20-20%',color:'#78350f',eq:V_t2_20,dd:DD_t2_20,bg:'#fffbeb',dr:0}},
+  {{name:'Timing1-BTAL-RV20-22%',color:'#d946ef',eq:V_t1,dd:DD_t1,bg:'#fdf4ff',dr:0}},
+  {{name:'Timing1-BTAL-RV20-25%',color:'#a855f7',eq:V_t1_25,dd:DD_t1_25,bg:'#faf5ff',dr:0}},
+  {{name:'Timing1-BTAL-RV20-20%',color:'#ec4899',eq:V_t1_20,dd:DD_t1_20,bg:'#fdf2f8',dr:0}},
+  {{name:'Timing1-BTAL-RV60-22%',color:'#14b8a6',eq:V_t1_rv60,dd:DD_t1_rv60,bg:'#f0fdfa',dr:0}},
+  {{name:'Timing2-BTAL-22%',color:'#b45309',eq:V_t2,dd:DD_t2,bg:'#fef3c7',dr:0}},
+  {{name:'Timing2-BTAL-25%',color:'#92400e',eq:V_t2_25,dd:DD_t2_25,bg:'#fefce8',dr:0}},
+  {{name:'Timing2-BTAL-20%',color:'#78350f',eq:V_t2_20,dd:DD_t2_20,bg:'#fffbeb',dr:0}},
+  // DBMF family
   {{name:'25tqqq+40dbmf+15gld+15xlp+5cure',color:'#1e40af',eq:V_dbmf_strat,dd:DD_dbmf_strat,bg:'#dbeafe',dr:{f'{dr_dbmf_strat:.2f}'} }},
   {{name:'Timing1-DBMF-RV20-22%',color:'#3b82f6',eq:V_t1d_22,dd:DD_t1d_22,bg:'#eff6ff',dr:0}},
   {{name:'Timing1-DBMF-RV20-25%',color:'#0891b2',eq:V_t1d_25,dd:DD_t1d_25,bg:'#cffafe',dr:0}},
   {{name:'Timing1-DBMF-RV20-20%',color:'#0d9488',eq:V_t1d_20,dd:DD_t1d_20,bg:'#ccfbf1',dr:0}},
+  // DBBT family
   {{name:'30tqqq+20dbmf+15btal+15gld+15xlp+5cure',color:'#9f1239',eq:V_dbbt_strat,dd:DD_dbbt_strat,bg:'#ffe4e6',dr:{f'{dr_dbbt_strat:.2f}'} }},
   {{name:'Timing1-DBBT-RV20-22%',color:'#e11d48',eq:V_t1b_22,dd:DD_t1b_22,bg:'#fff1f2',dr:0}},
   {{name:'Timing1-DBBT-RV20-25%',color:'#f43f5e',eq:V_t1b_25,dd:DD_t1b_25,bg:'#ffe4e6',dr:0}},
   {{name:'Timing1-DBBT-RV20-20%',color:'#fb7185',eq:V_t1b_20,dd:DD_t1b_20,bg:'#fff1f2',dr:0}},
-  {{name:'100% SPY',color:'#f59e0b',eq:V_spy,dd:DD_spy,bg:'',dr:1}},
-  {{name:'100% QQQ',color:'#06b6d4',eq:V_qqq,dd:DD_qqq,bg:'',dr:1}},
-  {{name:'50%BTAL+50%TQQQ',color:'#22c55e',eq:V_bt50,dd:DD_bt50,bg:'',dr:{f'{dr_bt50:.2f}'} }},
 ];
 const SPY_IDX = PORTFOLIOS.findIndex(p=>p.name==='100% SPY');
 
