@@ -11,7 +11,8 @@ Output:  <repo>/output/TQQQPortfolioStrategy-<YYYYMMDD_HHMMSS>/
            └── TQQQPortfolioStrategy-log.txt  (rebalance log)
 
 Usage:
-    python3.11 run_backtest.py                # default 2019-05-08 → 2026-04-06 (DBMF inception)
+    python3.11 run_backtest.py                # refresh data → backtest 2019-05-08 → latest → open HTML
+    python3.11 run_backtest.py --no-update    # skip the data refresh, use existing data
     python3.11 run_backtest.py --start 2011-09-14 --end 2026-04-06   # full history (DBMF strategies will be flat pre-2019-05-08)
     python3.11 run_backtest.py --no-open      # don't open browser
 """
@@ -45,6 +46,12 @@ STRATEGY_NAME = "TQQQPortfolioStrategy"
 BASE_WEIGHTS  = {"TQQQ": 0.35, "BTAL": 0.30, "GLD": 0.15, "XLP": 0.15, "CURE": 0.05}
 INITIAL_CASH  = 100_000
 
+# Local proxy for the optional pre-backtest data refresh. Yahoo rate-limits this
+# user's home ISP, so download_data needs a proxy. We route through this one ONLY
+# if (a) no proxy env var is already set and (b) the port is actually listening,
+# so it's a no-op on other networks / when the proxy is down. Adjust if it moves.
+PROXY_HOST, PROXY_PORT = "127.0.0.1", 12334
+
 
 def parse_args():
     p = argparse.ArgumentParser(description="Run portfolio strategy backtest.")
@@ -57,6 +64,8 @@ def parse_args():
     )
     p.add_argument("--no-report", action="store_true", help="Skip HTML report generation.")
     p.add_argument("--no-open",   action="store_true", help="Do not auto-open HTML in browser.")
+    p.add_argument("--no-update", action="store_true",
+                   help="Skip the pre-backtest incremental data refresh (use existing data).")
     return p.parse_args()
 
 
@@ -216,9 +225,57 @@ def run_report(results_path: Path, open_browser: bool):
         subprocess.run(["open", str(output_html)])
 
 
+def _proxy_env_for_download() -> dict:
+    """Environment for the data-refresh subprocess.
+
+    Respects any proxy the user already exported. Otherwise, if the documented
+    local proxy is actually listening, route through it (Yahoo rate-limits the
+    home ISP). On a clean network with no proxy up, returns env unchanged so the
+    download goes direct.
+    """
+    import socket
+    env = os.environ.copy()
+    proxy_keys = ("https_proxy", "http_proxy", "all_proxy",
+                  "HTTPS_PROXY", "HTTP_PROXY", "ALL_PROXY")
+    if any(env.get(k) for k in proxy_keys):
+        return env
+    try:
+        with socket.create_connection((PROXY_HOST, PROXY_PORT), timeout=0.3):
+            pass
+    except OSError:
+        return env   # proxy not running → go direct
+    env["https_proxy"] = env["http_proxy"] = f"http://{PROXY_HOST}:{PROXY_PORT}"
+    env["all_proxy"] = f"socks5://{PROXY_HOST}:{PROXY_PORT}"
+    return env
+
+
+def update_data() -> None:
+    """Best-effort incremental refresh of all price data before the backtest.
+
+    Never fatal: a network / rate-limit failure just falls back to the existing
+    data so the backtest still runs. Skipped with --no-update.
+    """
+    script = STRATEGIES / "download_data.py"
+    print(f"\n{'─'*60}")
+    print("  Refreshing price data (incremental)…")
+    print(f"{'─'*60}", flush=True)   # flush so our header precedes subprocess output
+    try:
+        r = subprocess.run([sys.executable, str(script)],
+                           env=_proxy_env_for_download())
+        if r.returncode != 0:
+            print("  ⚠ data refresh incomplete — continuing with existing data.")
+    except Exception as exc:
+        print(f"  ⚠ data refresh failed ({exc}) — continuing with existing data.")
+
+
 def main():
     args = parse_args()
     set_backend(args.backend)
+
+    # Try to pull the latest prices first (best-effort) so the backtest runs on
+    # fresh data and the auto end-date below reflects it.
+    if not args.no_update:
+        update_data()
 
     # Default end = latest available trading day (SPY drives the date axis),
     # so re-running after a data refresh automatically extends to newest data.
