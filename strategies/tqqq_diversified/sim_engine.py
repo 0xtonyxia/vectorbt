@@ -324,16 +324,25 @@ def simulate_timing1(all_prices, dates, initial=100_000,
         if need_annual:
             total = sum(shares.get(t, 0) * pxs[t] for t in all_tickers) if shares else initial
             before = _get_weights(shares, pxs, all_tickers) if shares else {}
+            rv = get_rv(d)
             shares = {}
             for t, w in base_weights.items():
                 shares[t] = (total * w) / pxs[t]
             shares["QQQ"] = 0
+            # Respect the current vol regime for the attack leg: if QQQ's RV is
+            # above threshold at the rebalance date, hold the attack leg as QQQ
+            # instead of snapping back to TQQQ (mirrors the monthly check).
+            if rv > rv_threshold:
+                tqqq_val = shares.get("TQQQ", 0) * pxs["TQQQ"]
+                if tqqq_val > 0:
+                    shares["QQQ"] = tqqq_val / pxs["QQQ"]
+                    shares["TQQQ"] = 0
             last_rebal_year = year
             last_check_month = month
             months_since_check = 0
             after = _get_weights(shares, pxs, all_tickers)
             log.append({"date": d, "type": "annual", "before": before, "after": after,
-                        "rv20": get_rv(d)})
+                        "rv20": rv})
 
         elif need_check:
             rv = get_rv(d)
@@ -394,14 +403,23 @@ def simulate_timing2(all_prices, dates, initial=100_000, rv_threshold=22.0):
         if need_annual:
             total = sum(shares.get(t, 0) * pxs[t] for t in all_tickers) if shares else initial
             before = _get_weights(shares, pxs, all_tickers) if shares else {}
+            rv20 = _get_qqq_rv20(qqq_sorted, qqq_map, d)
             shares = {}
             for t, w in base_weights.items():
                 shares[t] = (total * w) / pxs[t]
             shares["QQQ"] = 0
+            # Respect the current vol regime for the attack bucket: above
+            # threshold, split the attack leg 25% TQQQ / 75% QQQ (mirrors the
+            # monthly check) instead of snapping back to 100% TQQQ.
+            if rv20 > rv_threshold:
+                attack_total = shares.get("TQQQ", 0) * pxs["TQQQ"]
+                if attack_total > 0:
+                    shares["TQQQ"] = (attack_total * 0.25) / pxs["TQQQ"]
+                    shares["QQQ"] = (attack_total * 0.75) / pxs["QQQ"]
             last_rebal_year = year
             after = _get_weights(shares, pxs, all_tickers)
             log.append({"date": d, "type": "annual", "before": before, "after": after,
-                        "rv20": _get_qqq_rv20(qqq_sorted, qqq_map, d)})
+                        "rv20": rv20})
             last_check_month = month
 
         elif need_monthly:
