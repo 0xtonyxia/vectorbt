@@ -579,9 +579,9 @@ log_html  = _build_log_html("Timing1-BTAL-RV20-22%", t1_log, "#d946ef")
 log_html += _build_log_html("Timing1-BTAL-RV20-25%", t1_25_log, "#a855f7")
 log_html += _build_log_html("Timing1-BTAL-RV20-20%", t1_20_log, "#ec4899")
 log_html += _build_log_html("Timing1-BTAL-RV60-22%", t1_rv60_log, "#14b8a6")
-log_html += _build_log_html("Timing2-BTAL-22%", t2_log, "#b45309")
-log_html += _build_log_html("Timing2-BTAL-25%", t2_25_log, "#92400e")
-log_html += _build_log_html("Timing2-BTAL-20%", t2_20_log, "#78350f")
+log_html += _build_log_html("Timing2-BTAL-RV20-22%", t2_log, "#b45309")
+log_html += _build_log_html("Timing2-BTAL-RV20-25%", t2_25_log, "#92400e")
+log_html += _build_log_html("Timing2-BTAL-RV20-20%", t2_20_log, "#78350f")
 log_html += _build_log_html("Timing1-DBMF-RV20-22%", t1d_22_log, "#3b82f6")
 log_html += _build_log_html("Timing1-DBMF-RV20-25%", t1d_25_log, "#0891b2")
 log_html += _build_log_html("Timing1-DBMF-RV20-20%", t1d_20_log, "#0d9488")
@@ -603,9 +603,9 @@ _portfolios = [
     {"name": "Timing1-BTAL-RV20-25%", "color": "#a855f7", "stats": comp_t1_25_stats, "eq": comp_t1_25_eq, "dd": dd_t1_25, "ann": comp_t1_25_ann, "dr": 0, "bg": "#faf5ff"},
     {"name": "Timing1-BTAL-RV20-20%", "color": "#ec4899", "stats": comp_t1_20_stats, "eq": comp_t1_20_eq, "dd": dd_t1_20, "ann": comp_t1_20_ann, "dr": 0, "bg": "#fdf2f8"},
     {"name": "Timing1-BTAL-RV60-22%", "color": "#14b8a6", "stats": comp_t1_rv60_stats, "eq": comp_t1_rv60_eq, "dd": dd_t1_rv60, "ann": comp_t1_rv60_ann, "dr": 0, "bg": "#f0fdfa"},
-    {"name": "Timing2-BTAL-22%", "color": "#b45309", "stats": comp_t2_stats, "eq": comp_t2_eq, "dd": dd_t2, "ann": comp_t2_ann, "dr": 0, "bg": "#fef3c7"},
-    {"name": "Timing2-BTAL-25%", "color": "#92400e", "stats": comp_t2_25_stats, "eq": comp_t2_25_eq, "dd": dd_t2_25, "ann": comp_t2_25_ann, "dr": 0, "bg": "#fefce8"},
-    {"name": "Timing2-BTAL-20%", "color": "#78350f", "stats": comp_t2_20_stats, "eq": comp_t2_20_eq, "dd": dd_t2_20, "ann": comp_t2_20_ann, "dr": 0, "bg": "#fffbeb"},
+    {"name": "Timing2-BTAL-RV20-22%", "color": "#b45309", "stats": comp_t2_stats, "eq": comp_t2_eq, "dd": dd_t2, "ann": comp_t2_ann, "dr": 0, "bg": "#fef3c7"},
+    {"name": "Timing2-BTAL-RV20-25%", "color": "#92400e", "stats": comp_t2_25_stats, "eq": comp_t2_25_eq, "dd": dd_t2_25, "ann": comp_t2_25_ann, "dr": 0, "bg": "#fefce8"},
+    {"name": "Timing2-BTAL-RV20-20%", "color": "#78350f", "stats": comp_t2_20_stats, "eq": comp_t2_20_eq, "dd": dd_t2_20, "ann": comp_t2_20_ann, "dr": 0, "bg": "#fffbeb"},
     # DBMF family
     {"name": "25tqqq+40dbmf+15gld+15xlp+5cure", "color": "#1e40af", "stats": comp_dbmf_strat_stats, "eq": comp_dbmf_strat_eq, "dd": dd_dbmf_strat, "ann": comp_dbmf_strat_ann, "dr": dr_dbmf_strat, "bg": "#dbeafe"},
     {"name": "Timing1-DBMF-RV20-22%", "color": "#3b82f6", "stats": comp_t1d_22_stats, "eq": comp_t1d_22_eq, "dd": dd_t1d_22, "ann": comp_t1d_22_ann, "dr": 0, "bg": "#eff6ff"},
@@ -1341,9 +1341,9 @@ const PORTFOLIOS = [
   {{name:'Timing1-BTAL-RV20-25%',color:'#a855f7',eq:V_t1_25,dd:DD_t1_25,bg:'#faf5ff',dr:0}},
   {{name:'Timing1-BTAL-RV20-20%',color:'#ec4899',eq:V_t1_20,dd:DD_t1_20,bg:'#fdf2f8',dr:0}},
   {{name:'Timing1-BTAL-RV60-22%',color:'#14b8a6',eq:V_t1_rv60,dd:DD_t1_rv60,bg:'#f0fdfa',dr:0}},
-  {{name:'Timing2-BTAL-22%',color:'#b45309',eq:V_t2,dd:DD_t2,bg:'#fef3c7',dr:0}},
-  {{name:'Timing2-BTAL-25%',color:'#92400e',eq:V_t2_25,dd:DD_t2_25,bg:'#fefce8',dr:0}},
-  {{name:'Timing2-BTAL-20%',color:'#78350f',eq:V_t2_20,dd:DD_t2_20,bg:'#fffbeb',dr:0}},
+  {{name:'Timing2-BTAL-RV20-22%',color:'#b45309',eq:V_t2,dd:DD_t2,bg:'#fef3c7',dr:0}},
+  {{name:'Timing2-BTAL-RV20-25%',color:'#92400e',eq:V_t2_25,dd:DD_t2_25,bg:'#fefce8',dr:0}},
+  {{name:'Timing2-BTAL-RV20-20%',color:'#78350f',eq:V_t2_20,dd:DD_t2_20,bg:'#fffbeb',dr:0}},
   // DBMF family
   {{name:'25tqqq+40dbmf+15gld+15xlp+5cure',color:'#1e40af',eq:V_dbmf_strat,dd:DD_dbmf_strat,bg:'#dbeafe',dr:{f'{dr_dbmf_strat:.2f}'} }},
   {{name:'Timing1-DBMF-RV20-22%',color:'#3b82f6',eq:V_t1d_22,dd:DD_t1d_22,bg:'#eff6ff',dr:0}},
