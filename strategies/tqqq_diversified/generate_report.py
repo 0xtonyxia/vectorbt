@@ -215,6 +215,116 @@ _strat_weights = {"TQQQ": 0.35, "BTAL": 0.30, "GLD": 0.15, "XLP": 0.15, "CURE": 
 _all_strat_prices = {t: read_lean_daily(t) for t in _strat_weights}
 comp_strat_eq = simulate_rebalance_portfolio(_strat_weights, _all_strat_prices, eq_dates, _initial)
 
+# ---------------------------------------------------------------------------
+# Reallocation helper (Reallocation tab): given a planned total $ amount and
+# QQQ's RV20 as of the latest data date, show target holdings for the three
+# production RV20-25% strategies. The attack leg (the "TQQQ" weight) is held as
+# QQQ when RV20 > threshold, else TQQQ — mirroring the live strategy decision.
+# ---------------------------------------------------------------------------
+_REALLOC_THRESHOLD = 25.0
+_realloc_strats = [
+    {"name": "Timing1-BTAL-RV20-25%", "weights": _strat_weights},
+    {"name": "Timing1-DBMF-RV20-25%", "weights": _dbmf_base_weights},
+    {"name": "Timing1-DBBT-RV20-25%", "weights": _dbbt_base_weights},
+]
+_realloc_tickers = sorted({t for s in _realloc_strats for t in s["weights"]} | {"QQQ"})
+_realloc_last_px = {}
+for _t in _realloc_tickers:
+    _pxs = _comp_prices.get(_t, {})
+    if _pxs:
+        _d = max(_pxs)
+        _realloc_last_px[_t] = {"date": _d, "px": round(float(_pxs[_d]), 4)}
+_realloc_data = {
+    "threshold":    _REALLOC_THRESHOLD,
+    "initial":      _initial,
+    "dataLastDate": eq_dates[-1] if eq_dates else "",
+    "strategies":   [{"name": s["name"], "weights": s["weights"]} for s in _realloc_strats],
+    "lastPx":       _realloc_last_px,
+}
+
+# Built as a plain (non-f) string so the JS keeps normal single braces; injected
+# into the main HTML f-string via the {_realloc_js} placeholder.
+_realloc_js = "const REALLOC = " + json.dumps(_realloc_data) + ";\n" + r"""
+function _rIsoToDate(s){ const p=s.split('-').map(Number); return new Date(p[0],p[1]-1,p[2]); }
+function _rFmtDate(d){ const m=String(d.getMonth()+1).padStart(2,'0'), day=String(d.getDate()).padStart(2,'0'); return d.getFullYear()+'-'+m+'-'+day; }
+function _rLastTradingDay(today){ const d=new Date(today.getFullYear(),today.getMonth(),today.getDate()); d.setDate(d.getDate()-1); while(d.getDay()===0||d.getDay()===6){ d.setDate(d.getDate()-1); } return d; }
+function _rUSD(x){ return '$'+Math.round(x).toLocaleString('en-US'); }
+function _rRV20(v,w){ if(!v||v.length<w+1)return 0; const r=[]; for(let i=v.length-w;i<v.length;i++){ r.push(v[i]/v[i-1]-1); } const m=r.reduce((a,b)=>a+b,0)/r.length; const va=r.reduce((a,b)=>a+(b-m)*(b-m),0)/r.length; return Math.sqrt(va)*Math.sqrt(252)*100; }
+
+function renderRealloc(){
+  const errBox=document.getElementById('realloc-error');
+  const statusBox=document.getElementById('realloc-status');
+  const resBox=document.getElementById('realloc-results');
+  if(!resBox) return;
+
+  // ── Data freshness ───────────────────────────────────────────────────
+  // We can't know the live market-holiday calendar client-side, so we count
+  // missing weekday sessions between the data's last date and "yesterday".
+  // Tolerate ONE missing session (covers any single holiday, e.g. Juneteenth)
+  // with a soft note; hard-error (prompt a re-run) on 2+ missing sessions or
+  // data more than ~4 calendar days old — that can't be explained by a holiday.
+  const today=new Date();
+  const todayMid=new Date(today.getFullYear(),today.getMonth(),today.getDate());
+  const dataLast=_rIsoToDate(REALLOC.dataLastDate);
+  const expected=_rLastTradingDay(today);   // most recent weekday before today
+  const staleDays=Math.round((todayMid-dataLast)/86400000);
+  let missing=0;
+  for(let d=new Date(dataLast.getTime()+86400000); d<=expected; d.setDate(d.getDate()+1)){
+    const wd=d.getDay(); if(wd!==0&&wd!==6) missing++;
+  }
+  if(missing>=2 || staleDays>4){
+    errBox.style.display='block';
+    errBox.innerHTML='⚠ 报告数据已过期：数据截至 <b>'+REALLOC.dataLastDate+'</b>（距今 '+staleDays+' 天，缺少约 '+missing+' 个交易日，应更新至 ≥ '+_rFmtDate(expected)+'）。<br>请重新运行最新回测以下载最新数据：<code style="background:#fee2e2;padding:2px 6px;border-radius:4px">python3.11 strategies/tqqq_diversified/run_backtest.py</code>';
+    statusBox.innerHTML='';
+    resBox.innerHTML='';
+    return;
+  }
+  errBox.style.display='none';
+
+  // ── RV20 (QQQ, 20d) as of the latest data date → attack-leg decision
+  const rv=_rRV20(V_qqq,20);
+  const hi=rv>REALLOC.threshold;
+  const attack=hi?'QQQ':'TQQQ';
+  const lag=(missing===1)?' <span style="color:#b45309">（最近交易日 '+_rFmtDate(expected)+' 可能尚未包含——节假日或数据延迟；如需最新数据可重跑回测）</span>':'';
+  statusBox.innerHTML='数据截至 <b>'+REALLOC.dataLastDate+'</b>'+lag+
+    ' · QQQ RV20 = <b>'+rv.toFixed(1)+'%</b> '+(hi?'&gt;':'≤')+' 阈值 '+REALLOC.threshold+'%'+
+    ' → 攻击腿持有 <b style="color:'+(hi?'#0891b2':'#dc2626')+'">'+attack+'</b>';
+
+  const total=parseFloat((document.getElementById('realloc-amount')||{}).value)||0;
+  let html='';
+  REALLOC.strategies.forEach(function(s){
+    let rows='';
+    Object.keys(s.weights).forEach(function(t){
+      const isAttack=(t==='TQQQ');
+      const tk=isAttack?attack:t;
+      const w=s.weights[t];
+      const amt=total*w;
+      const px=REALLOC.lastPx[tk];
+      const sh=(px&&px.px>0)?(amt/px.px):null;
+      rows+='<tr'+(isAttack?' style="background:#fffbeb"':'')+'>'+
+        '<td style="padding:6px 10px;font-weight:'+(isAttack?'700':'500')+'">'+tk+(isAttack?' <span style="font-size:.7rem;color:#94a3b8">(attack leg)</span>':'')+'</td>'+
+        '<td style="padding:6px 10px;text-align:right">'+(w*100).toFixed(0)+'%</td>'+
+        '<td style="padding:6px 10px;text-align:right;font-variant-numeric:tabular-nums">'+_rUSD(amt)+'</td>'+
+        '<td style="padding:6px 10px;text-align:right;color:#64748b;font-variant-numeric:tabular-nums">'+(sh!==null?sh.toFixed(2):'—')+'</td></tr>';
+    });
+    html+='<div class="card" style="margin-bottom:14px">'+
+      '<div style="font-weight:700;font-size:1rem;margin-bottom:8px">'+s.name+'</div>'+
+      '<table style="width:100%;border-collapse:collapse;font-size:.9rem">'+
+      '<thead><tr style="color:#64748b;border-bottom:1px solid #e2e8f0">'+
+      '<th style="padding:6px 10px;text-align:left">标的</th>'+
+      '<th style="padding:6px 10px;text-align:right">权重</th>'+
+      '<th style="padding:6px 10px;text-align:right">金额</th>'+
+      '<th style="padding:6px 10px;text-align:right">股数 (最新收盘价)</th>'+
+      '</tr></thead><tbody>'+rows+
+      '<tr style="border-top:2px solid #e2e8f0;font-weight:700"><td style="padding:6px 10px">合计</td><td></td>'+
+      '<td style="padding:6px 10px;text-align:right">'+_rUSD(total)+'</td><td></td></tr>'+
+      '</tbody></table></div>';
+  });
+  resBox.innerHTML=html;
+}
+renderRealloc();
+"""
+
 comp_strat_stats = compute_stats(comp_strat_eq, eq_dates)  # from simulated equity
 comp_spy_stats   = compute_stats(comp_spy_eq, eq_dates)
 comp_qqq_stats   = compute_stats(comp_qqq_eq, eq_dates)
@@ -815,7 +925,8 @@ body{{font-family:'Inter',system-ui,-apple-system,sans-serif;background:#f8fafc;
   <div class="tab" onclick="showTab(2,this)">RETURNS</div>
   <div class="tab" onclick="showTab(3,this)">DRAWDOWN</div>
   <div class="tab" onclick="showTab(4,this)">ALLOCATION</div>
-  <div class="tab" onclick="showTab(5,this)">REBALANCE LOG</div>
+  <div class="tab" onclick="showTab(5,this)">REALLOCATION</div>
+  <div class="tab" onclick="showTab(6,this)">REBALANCE LOG</div>
 </div>
 
 <div class="content">
@@ -908,6 +1019,25 @@ body{{font-family:'Inter',system-ui,-apple-system,sans-serif;background:#f8fafc;
 <div class="panel" id="p4">
   <div class="section-title">Portfolio Allocation Over Time</div>
   <div class="card"><div id="ch-alloc" style="height:420px"></div></div>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════
+     REALLOCATION  (live "what to hold today" helper)
+     ═══════════════════════════════════════════════════════ -->
+<div class="panel" id="p-realloc">
+  <div class="section-title">Reallocation — 按当前 RV20 计算建议持仓</div>
+  <div class="card">
+    <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap">
+      <label style="font-size:.9rem;color:#334155">计划持仓总金额 (USD)
+        <input id="realloc-amount" type="number" min="0" step="1000" value="{int(_initial)}"
+               oninput="renderRealloc()"
+               style="margin-left:8px;padding:6px 10px;border:1px solid #cbd5e1;border-radius:6px;width:170px;font:inherit">
+      </label>
+    </div>
+    <div id="realloc-error" style="display:none;margin-top:12px;background:#fef2f2;border:1px solid #fecaca;color:#b91c1c;padding:12px 14px;border-radius:8px;font-size:.9rem;line-height:1.6"></div>
+    <div id="realloc-status" style="font-size:.85rem;color:#475569;margin-top:12px"></div>
+  </div>
+  <div id="realloc-results" style="margin-top:14px"></div>
 </div>
 
 <!-- ═══════════════════════════════════════════════════════
@@ -1582,6 +1712,9 @@ function applyQuickRange() {{
   document.getElementById('dateTo').value=endDate;
   recalcAll(d0,endDate);
 }}
+
+/* ── Reallocation tab (live holdings helper) ── */
+{_realloc_js}
 </script>
 </body>
 </html>
