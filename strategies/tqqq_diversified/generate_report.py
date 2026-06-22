@@ -234,12 +234,24 @@ for _t in _realloc_tickers:
     if _pxs:
         _d = max(_pxs)
         _realloc_last_px[_t] = {"date": _d, "px": round(float(_pxs[_d]), 4)}
+
+# Last rv_window+1 QQQ closes (21 for RV20) so the tab can show both the raw
+# closing prices AND the RV20 calculation. RV20 needs 20 daily returns → 21
+# closes; we compute the live RV20 from THIS series (not the equity curve) so
+# the shown calculation and the attack-leg decision use identical numbers.
+_REALLOC_RV_WINDOW = 20
+_qqq_px_map = _comp_prices.get("QQQ", {})
+_qqq_dsorted = sorted(d for d in _qqq_px_map if (not eq_dates) or d <= eq_dates[-1])
+_qqq_tail = [{"date": d, "close": round(float(_qqq_px_map[d]), 4)}
+             for d in _qqq_dsorted[-(_REALLOC_RV_WINDOW + 1):]]
 _realloc_data = {
     "threshold":    _REALLOC_THRESHOLD,
+    "rvWindow":     _REALLOC_RV_WINDOW,
     "initial":      _initial,
     "dataLastDate": eq_dates[-1] if eq_dates else "",
     "strategies":   [{"name": s["name"], "weights": s["weights"]} for s in _realloc_strats],
     "lastPx":       _realloc_last_px,
+    "qqqTail":      _qqq_tail,
 }
 
 # Built as a plain (non-f) string so the JS keeps normal single braces; injected
@@ -249,12 +261,24 @@ function _rIsoToDate(s){ const p=s.split('-').map(Number); return new Date(p[0],
 function _rFmtDate(d){ const m=String(d.getMonth()+1).padStart(2,'0'), day=String(d.getDate()).padStart(2,'0'); return d.getFullYear()+'-'+m+'-'+day; }
 function _rLastTradingDay(today){ const d=new Date(today.getFullYear(),today.getMonth(),today.getDate()); d.setDate(d.getDate()-1); while(d.getDay()===0||d.getDay()===6){ d.setDate(d.getDate()-1); } return d; }
 function _rUSD(x){ return '$'+Math.round(x).toLocaleString('en-US'); }
-function _rRV20(v,w){ if(!v||v.length<w+1)return 0; const r=[]; for(let i=v.length-w;i<v.length;i++){ r.push(v[i]/v[i-1]-1); } const m=r.reduce((a,b)=>a+b,0)/r.length; const va=r.reduce((a,b)=>a+(b-m)*(b-m),0)/r.length; return Math.sqrt(va)*Math.sqrt(252)*100; }
+// Full RV20 breakdown from a chronological close series (need w+1 closes for w
+// returns). Population variance (÷N) annualized by sqrt(252) — matches
+// sim_engine._get_qqq_rv20 exactly. Returns null if not enough data.
+function _rRV20From(closes,w){
+  if(!closes||closes.length<w+1) return null;
+  const used=closes.slice(closes.length-(w+1));
+  const rets=[]; for(let i=1;i<used.length;i++){ rets.push(used[i]/used[i-1]-1); }
+  const mean=rets.reduce((a,b)=>a+b,0)/rets.length;
+  const variance=rets.reduce((a,b)=>a+(b-mean)*(b-mean),0)/rets.length;
+  const dailyStd=Math.sqrt(variance);
+  return {used:used, rets:rets, mean:mean, variance:variance, dailyStd:dailyStd, rv:dailyStd*Math.sqrt(252)*100};
+}
 
 function renderRealloc(){
   const errBox=document.getElementById('realloc-error');
   const statusBox=document.getElementById('realloc-status');
   const resBox=document.getElementById('realloc-results');
+  const rvBox=document.getElementById('realloc-rv');
   if(!resBox) return;
 
   // ── Data freshness ───────────────────────────────────────────────────
@@ -277,48 +301,100 @@ function renderRealloc(){
     errBox.innerHTML='⚠ 报告数据已过期：数据截至 <b>'+REALLOC.dataLastDate+'</b>（距今 '+staleDays+' 天，缺少约 '+missing+' 个交易日，应更新至 ≥ '+_rFmtDate(expected)+'）。<br>请重新运行最新回测以下载最新数据：<code style="background:#fee2e2;padding:2px 6px;border-radius:4px">python3.11 strategies/tqqq_diversified/run_backtest.py</code>';
     statusBox.innerHTML='';
     resBox.innerHTML='';
+    if(rvBox) rvBox.innerHTML='';
     return;
   }
   errBox.style.display='none';
 
-  // ── RV20 (QQQ, 20d) as of the latest data date → attack-leg decision
-  const rv=_rRV20(V_qqq,20);
+  // ── RV20 (QQQ) computed from the last rvWindow+1 closes → attack-leg decision.
+  // Same series we render below, so the shown calc and the decision agree.
+  const W=REALLOC.rvWindow;
+  const tail=REALLOC.qqqTail||[];
+  const calc=_rRV20From(tail.map(function(p){return p.close;}),W);
+  const rv=calc?calc.rv:0;
   const hi=rv>REALLOC.threshold;
   const attack=hi?'QQQ':'TQQQ';
   const lag=(missing===1)?' <span style="color:#b45309">（最近交易日 '+_rFmtDate(expected)+' 可能尚未包含——节假日或数据延迟；如需最新数据可重跑回测）</span>':'';
   statusBox.innerHTML='数据截至 <b>'+REALLOC.dataLastDate+'</b>'+lag+
-    ' · QQQ RV20 = <b>'+rv.toFixed(1)+'%</b> '+(hi?'&gt;':'≤')+' 阈值 '+REALLOC.threshold+'%'+
+    ' · QQQ RV'+W+' = <b>'+rv.toFixed(1)+'%</b> '+(hi?'&gt;':'≤')+' 阈值 '+REALLOC.threshold+'%'+
     ' → 攻击腿持有 <b style="color:'+(hi?'#0891b2':'#dc2626')+'">'+attack+'</b>';
+
+  // ── QQQ closing prices + RV20 calculation process (collapsible, default collapsed)
+  if(rvBox){
+    if(!calc){ rvBox.innerHTML=''; }
+    else {
+      // Preserve expand/collapse state across re-renders (e.g. amount oninput)
+      const _d=rvBox.querySelector('details'); const wasOpen=_d?_d.open:false;
+      let prows='';
+      for(let i=0;i<tail.length;i++){
+        const ret=(i===0)?null:calc.rets[i-1];
+        const rc=(ret===null)?'#cbd5e1':(ret>=0?'#16a34a':'#dc2626');
+        prows+='<tr>'+
+          '<td style="padding:4px 10px;color:#94a3b8;text-align:right">'+i+'</td>'+
+          '<td style="padding:4px 10px">'+tail[i].date+'</td>'+
+          '<td style="padding:4px 10px;text-align:right;font-variant-numeric:tabular-nums">'+tail[i].close.toFixed(4)+'</td>'+
+          '<td style="padding:4px 10px;text-align:right;font-variant-numeric:tabular-nums;color:'+rc+'">'+
+            (ret===null?'—':(ret>=0?'+':'')+(ret*100).toFixed(3)+'%')+'</td></tr>';
+      }
+      rvBox.innerHTML='<details class="card"'+(wasOpen?' open':'')+' style="margin-top:14px">'+
+        '<summary style="font-weight:700;font-size:1rem;cursor:pointer;user-select:none">QQQ 最近 '+tail.length+' 个交易日收盘价 & RV'+W+' 计算过程 <span style="font-weight:400;color:#94a3b8;font-size:.8rem">（点击展开）</span></summary>'+
+        '<div style="font-size:.8rem;color:#64748b;margin:10px 0;line-height:1.6">'+
+          'RV'+W+' = 最近 '+W+' 个日收益率的标准差（总体，÷N）× √252 × 100。需 '+W+'+1 = '+(W+1)+' 个收盘价以得到 '+W+' 个日收益率（行 #0 为基准，无收益率）。</div>'+
+        '<div style="overflow-x:auto"><table style="width:100%;border-collapse:collapse;font-size:.85rem">'+
+        '<thead><tr style="color:#64748b;border-bottom:1px solid #e2e8f0">'+
+        '<th style="padding:4px 10px;text-align:right">#</th>'+
+        '<th style="padding:4px 10px;text-align:left">日期</th>'+
+        '<th style="padding:4px 10px;text-align:right">收盘价</th>'+
+        '<th style="padding:4px 10px;text-align:right">日收益率 rᵢ</th>'+
+        '</tr></thead><tbody>'+prows+'</tbody></table></div>'+
+        '<div style="margin-top:12px;padding-top:10px;border-top:1px solid #e2e8f0;font-size:.85rem;color:#334155;line-height:1.9;font-variant-numeric:tabular-nums">'+
+          '日收益率均值 μ = Σrᵢ / '+calc.rets.length+' = <b>'+(calc.mean*100).toFixed(4)+'%</b><br>'+
+          '日方差 σ² = Σ(rᵢ−μ)² / '+calc.rets.length+' = <b>'+calc.variance.toExponential(4)+'</b><br>'+
+          '日标准差 σ = √σ² = <b>'+(calc.dailyStd*100).toFixed(4)+'%</b><br>'+
+          'RV'+W+' = σ × √252 × 100 = '+(calc.dailyStd*100).toFixed(4)+'% × '+Math.sqrt(252).toFixed(4)+
+            ' = <b style="color:'+(hi?'#0891b2':'#dc2626')+';font-size:1.05rem">'+rv.toFixed(2)+'%</b></div>'+
+        '</details>';
+    }
+  }
 
   const total=parseFloat((document.getElementById('realloc-amount')||{}).value)||0;
   let html='';
   REALLOC.strategies.forEach(function(s){
     let rows='';
+    let sumCost=0;
     Object.keys(s.weights).forEach(function(t){
       const isAttack=(t==='TQQQ');
       const tk=isAttack?attack:t;
       const w=s.weights[t];
-      const amt=total*w;
+      const target=total*w;
       const px=REALLOC.lastPx[tk];
-      const sh=(px&&px.px>0)?(amt/px.px):null;
+      const sh=(px&&px.px>0)?Math.round(target/px.px):null;   // integer shares
+      const cost=(sh!==null)?sh*px.px:null;                   // actual $ at last close
+      if(cost!==null) sumCost+=cost;
       rows+='<tr'+(isAttack?' style="background:#fffbeb"':'')+'>'+
         '<td style="padding:6px 10px;font-weight:'+(isAttack?'700':'500')+'">'+tk+(isAttack?' <span style="font-size:.7rem;color:#94a3b8">(attack leg)</span>':'')+'</td>'+
         '<td style="padding:6px 10px;text-align:right">'+(w*100).toFixed(0)+'%</td>'+
-        '<td style="padding:6px 10px;text-align:right;font-variant-numeric:tabular-nums">'+_rUSD(amt)+'</td>'+
-        '<td style="padding:6px 10px;text-align:right;color:#64748b;font-variant-numeric:tabular-nums">'+(sh!==null?sh.toFixed(2):'—')+'</td></tr>';
+        '<td style="padding:6px 10px;text-align:right;font-variant-numeric:tabular-nums">'+_rUSD(target)+'</td>'+
+        '<td style="padding:6px 10px;text-align:right;font-weight:600;font-variant-numeric:tabular-nums">'+(sh!==null?sh.toLocaleString('en-US'):'—')+'</td>'+
+        '<td style="padding:6px 10px;text-align:right;color:#64748b;font-variant-numeric:tabular-nums">'+(cost!==null?_rUSD(cost):'—')+'</td></tr>';
     });
+    const cash=total-sumCost;
     html+='<div class="card" style="margin-bottom:14px">'+
       '<div style="font-weight:700;font-size:1rem;margin-bottom:8px">'+s.name+'</div>'+
-      '<table style="width:100%;border-collapse:collapse;font-size:.9rem">'+
+      '<div style="overflow-x:auto"><table style="width:100%;border-collapse:collapse;font-size:.9rem">'+
       '<thead><tr style="color:#64748b;border-bottom:1px solid #e2e8f0">'+
       '<th style="padding:6px 10px;text-align:left">标的</th>'+
       '<th style="padding:6px 10px;text-align:right">权重</th>'+
-      '<th style="padding:6px 10px;text-align:right">金额</th>'+
-      '<th style="padding:6px 10px;text-align:right">股数 (最新收盘价)</th>'+
+      '<th style="padding:6px 10px;text-align:right">目标金额</th>'+
+      '<th style="padding:6px 10px;text-align:right">股数</th>'+
+      '<th style="padding:6px 10px;text-align:right">实际金额 (最新收盘价)</th>'+
       '</tr></thead><tbody>'+rows+
       '<tr style="border-top:2px solid #e2e8f0;font-weight:700"><td style="padding:6px 10px">合计</td><td></td>'+
-      '<td style="padding:6px 10px;text-align:right">'+_rUSD(total)+'</td><td></td></tr>'+
-      '</tbody></table></div>';
+      '<td style="padding:6px 10px;text-align:right">'+_rUSD(total)+'</td><td></td>'+
+      '<td style="padding:6px 10px;text-align:right">'+_rUSD(sumCost)+'</td></tr>'+
+      '<tr style="color:#64748b"><td style="padding:4px 10px" colspan="4">剩余现金（整数股取整后）</td>'+
+      '<td style="padding:4px 10px;text-align:right;font-variant-numeric:tabular-nums">'+_rUSD(cash)+'</td></tr>'+
+      '</tbody></table></div></div>';
   });
   resBox.innerHTML=html;
 }
@@ -1037,6 +1113,7 @@ body{{font-family:'Inter',system-ui,-apple-system,sans-serif;background:#f8fafc;
     <div id="realloc-error" style="display:none;margin-top:12px;background:#fef2f2;border:1px solid #fecaca;color:#b91c1c;padding:12px 14px;border-radius:8px;font-size:.9rem;line-height:1.6"></div>
     <div id="realloc-status" style="font-size:.85rem;color:#475569;margin-top:12px"></div>
   </div>
+  <div id="realloc-rv"></div>
   <div id="realloc-results" style="margin-top:14px"></div>
 </div>
 
