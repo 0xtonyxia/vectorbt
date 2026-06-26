@@ -1,0 +1,125 @@
+diff --git a/strategies/tqqq_diversified/README.md b/strategies/tqqq_diversified/README.md
+index 7ef9a84..f5f7425 100644
+--- a/strategies/tqqq_diversified/README.md
++++ b/strategies/tqqq_diversified/README.md
+@@ -86,6 +86,15 @@ freely between annual rebalances — only the attack leg is touched on timing ch
+ - **Timing2** (partial): `RV20 > threshold` → attack leg = 25% TQQQ + 75% QQQ;
+   else 100% TQQQ.
+ 
++**RV definition** (`sim_engine._realized_vol`): annualized realized volatility =
++**sample** std (`ddof=1`) of the last *N* daily **log** returns × √252. This is the
++standard realized-vol convention (matches `~/work/us_market/src/volatility.py`).
++A previous version used simple returns + population std (`÷N`), which read ~2.6%
++lower. Thresholds were **kept at 20/22/25%** — so under the higher (standardized)
++RV the attack leg trips into QQQ slightly earlier, making the timing variants
++modestly **more defensive** than the old simple-return version. (The base
++strategy has no RV timing, so the verification anchor below is unaffected.)
++
+ **The annual rebalance is volatility-aware too.** It does *not* blindly snap the
+ attack leg back to TQQQ: it rebalances all legs to base weights, then sets the
+ attack leg according to the current RV20 regime at the rebalance date (Timing1:
+diff --git a/strategies/tqqq_diversified/generate_report.py b/strategies/tqqq_diversified/generate_report.py
+index 7716b07..ebec8b3 100644
+--- a/strategies/tqqq_diversified/generate_report.py
++++ b/strategies/tqqq_diversified/generate_report.py
+@@ -262,14 +262,15 @@ function _rFmtDate(d){ const m=String(d.getMonth()+1).padStart(2,'0'), day=Strin
+ function _rLastTradingDay(today){ const d=new Date(today.getFullYear(),today.getMonth(),today.getDate()); d.setDate(d.getDate()-1); while(d.getDay()===0||d.getDay()===6){ d.setDate(d.getDate()-1); } return d; }
+ function _rUSD(x){ return '$'+Math.round(x).toLocaleString('en-US'); }
+ // Full RV20 breakdown from a chronological close series (need w+1 closes for w
+-// returns). Population variance (÷N) annualized by sqrt(252) — matches
+-// sim_engine._get_qqq_rv20 exactly. Returns null if not enough data.
++// returns). LOG returns + sample std (ddof=1), annualized by sqrt(252) — the
++// standard realized-vol convention, matching sim_engine._realized_vol exactly.
++// Returns null if not enough data.
+ function _rRV20From(closes,w){
+   if(!closes||closes.length<w+1) return null;
+   const used=closes.slice(closes.length-(w+1));
+-  const rets=[]; for(let i=1;i<used.length;i++){ rets.push(used[i]/used[i-1]-1); }
++  const rets=[]; for(let i=1;i<used.length;i++){ rets.push(Math.log(used[i]/used[i-1])); }
+   const mean=rets.reduce((a,b)=>a+b,0)/rets.length;
+-  const variance=rets.reduce((a,b)=>a+(b-mean)*(b-mean),0)/rets.length;
++  const variance=rets.reduce((a,b)=>a+(b-mean)*(b-mean),0)/(rets.length-1);   // ddof=1
+   const dailyStd=Math.sqrt(variance);
+   return {used:used, rets:rets, mean:mean, variance:variance, dailyStd:dailyStd, rv:dailyStd*Math.sqrt(252)*100};
+ }
+@@ -339,17 +340,17 @@ function renderRealloc(){
+       rvBox.innerHTML='<details class="card"'+(wasOpen?' open':'')+' style="margin-top:14px">'+
+         '<summary style="font-weight:700;font-size:1rem;cursor:pointer;user-select:none">QQQ 最近 '+tail.length+' 个交易日收盘价 & RV'+W+' 计算过程 <span style="font-weight:400;color:#94a3b8;font-size:.8rem">（点击展开）</span></summary>'+
+         '<div style="font-size:.8rem;color:#64748b;margin:10px 0;line-height:1.6">'+
+-          'RV'+W+' = 最近 '+W+' 个日收益率的标准差（总体，÷N）× √252 × 100。需 '+W+'+1 = '+(W+1)+' 个收盘价以得到 '+W+' 个日收益率（行 #0 为基准，无收益率）。</div>'+
++          'RV'+W+' = 最近 '+W+' 个日<b>对数</b>收益率的标准差（<b>样本，÷(N−1)</b>）× √252 × 100。需 '+W+'+1 = '+(W+1)+' 个收盘价以得到 '+W+' 个日收益率（行 #0 为基准，无收益率）。</div>'+
+         '<div style="overflow-x:auto"><table style="width:100%;border-collapse:collapse;font-size:.85rem">'+
+         '<thead><tr style="color:#64748b;border-bottom:1px solid #e2e8f0">'+
+         '<th style="padding:4px 10px;text-align:right">#</th>'+
+         '<th style="padding:4px 10px;text-align:left">日期</th>'+
+         '<th style="padding:4px 10px;text-align:right">收盘价</th>'+
+-        '<th style="padding:4px 10px;text-align:right">日收益率 rᵢ</th>'+
++        '<th style="padding:4px 10px;text-align:right">日对数收益率 rᵢ</th>'+
+         '</tr></thead><tbody>'+prows+'</tbody></table></div>'+
+         '<div style="margin-top:12px;padding-top:10px;border-top:1px solid #e2e8f0;font-size:.85rem;color:#334155;line-height:1.9;font-variant-numeric:tabular-nums">'+
+-          '日收益率均值 μ = Σrᵢ / '+calc.rets.length+' = <b>'+(calc.mean*100).toFixed(4)+'%</b><br>'+
+-          '日方差 σ² = Σ(rᵢ−μ)² / '+calc.rets.length+' = <b>'+calc.variance.toExponential(4)+'</b><br>'+
++          '日对数收益率均值 μ = Σrᵢ / '+calc.rets.length+' = <b>'+(calc.mean*100).toFixed(4)+'%</b><br>'+
++          '日方差 σ² = Σ(rᵢ−μ)² / (N−1) = Σ(rᵢ−μ)² / '+(calc.rets.length-1)+' = <b>'+calc.variance.toExponential(4)+'</b><br>'+
+           '日标准差 σ = √σ² = <b>'+(calc.dailyStd*100).toFixed(4)+'%</b><br>'+
+           'RV'+W+' = σ × √252 × 100 = '+(calc.dailyStd*100).toFixed(4)+'% × '+Math.sqrt(252).toFixed(4)+
+             ' = <b style="color:'+(hi?'#0891b2':'#dc2626')+';font-size:1.05rem">'+rv.toFixed(2)+'%</b></div>'+
+diff --git a/strategies/tqqq_diversified/sim_engine.py b/strategies/tqqq_diversified/sim_engine.py
+index 469b33b..ef51762 100644
+--- a/strategies/tqqq_diversified/sim_engine.py
++++ b/strategies/tqqq_diversified/sim_engine.py
+@@ -28,6 +28,7 @@ per-asset rebalancing or use bespoke metric definitions that don't map
+ cleanly to vectorbt's API.
+ """
+ 
++import math
+ import os
+ import zipfile
+ from datetime import datetime
+@@ -252,16 +253,26 @@ def _get_weights(shares: dict, pxs: dict, tickers: list) -> dict:
+     return {t: shares.get(t, 0) * pxs.get(t, 0) / total * 100 for t in tickers}
+ 
+ 
+-def _get_qqq_rv20(qqq_dates_sorted: list, qqq_by_date: dict, as_of: str) -> float:
+-    prior = [qqq_by_date[d] for d in qqq_dates_sorted if d <= as_of]
+-    if len(prior) < 21:
++def _realized_vol(prior: list, window: int) -> float:
++    """Annualized realized volatility (%) from a chronological price series.
++
++    Uses the last `window` LOG returns and the sample standard deviation
++    (ddof=1) — the standard realized-vol convention, matching
++    us_market/src/volatility.py. Returns 0 if fewer than window+1 prices.
++    """
++    if len(prior) < window + 1:
+         return 0
+-    rets = [prior[i] / prior[i - 1] - 1 for i in range(-20, 0)]
+-    mean_r = sum(rets) / len(rets)
+-    var = sum((r - mean_r) ** 2 for r in rets) / len(rets)
++    rets = [math.log(prior[i] / prior[i - 1]) for i in range(-window, 0)]
++    m = sum(rets) / len(rets)
++    var = sum((r - m) ** 2 for r in rets) / (len(rets) - 1)   # ddof=1 (sample)
+     return (var ** 0.5) * (252 ** 0.5) * 100
+ 
+ 
++def _get_qqq_rv20(qqq_dates_sorted: list, qqq_by_date: dict, as_of: str) -> float:
++    prior = [qqq_by_date[d] for d in qqq_dates_sorted if d <= as_of]
++    return _realized_vol(prior, 20)
++
++
+ def simulate_timing1(all_prices, dates, initial=100_000,
+                      rv_window=20, rv_threshold=22.0, check_months=1,
+                      base_weights=None):
+@@ -280,12 +291,7 @@ def simulate_timing1(all_prices, dates, initial=100_000,
+ 
+     def get_rv(as_of):
+         prior = [qqq_map[d] for d in qqq_sorted if d <= as_of]
+-        if len(prior) < rv_window + 1:
+-            return 0
+-        rets = [prior[i] / prior[i - 1] - 1 for i in range(-rv_window, 0)]
+-        m = sum(rets) / len(rets)
+-        var = sum((r - m) ** 2 for r in rets) / len(rets)
+-        return (var ** 0.5) * (252 ** 0.5) * 100
++        return _realized_vol(prior, rv_window)
+ 
+     equity, log = [], []
+     shares = {}

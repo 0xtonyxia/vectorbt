@@ -175,6 +175,24 @@ Our definitions don't match `vbt.Portfolio.stats()` 1:1:
 `sim_engine.py` is the source of truth; the JS recompute in `generate_report.py`
 is a line-by-line port of the same formulas (verified to match).
 
+### RV20 definition (and a rejected standardization)
+The timing RV (`sim_engine._get_qqq_rv20` / `simulate_timing1.get_rv`) uses
+**simple** returns and **population** std (`÷N`) over the last *N* daily returns,
+annualized `×√252×100`. We evaluated switching to the more textbook-standard
+convention — **log** returns + **sample** std (`ddof=1`) — to match
+`~/work/us_market/src/volatility.py` (the two repos otherwise report different
+RV20 for the same QQQ: ~29.2% vs ~30.1%). **Rejected.** The standardized formula
+reads ~2.6% higher, so it only matters relative to the timing thresholds:
+- Rescaling thresholds `20/22/25% → 21/23/26%` reproduces the current strategy to
+  the dollar (pure re-labeling — no point).
+- Keeping `20/22/25%` makes the variants more defensive: ~14–18% lower end-equity
+  over 2019→2026 with **unchanged** MaxDD (gave up upside, bought no drawdown
+  protection in this bull-heavy window).
+
+The base strategy has no RV timing, so the verification anchor is unaffected
+either way. The full diff is preserved (not applied) at
+`misc/rejected-rv20-standardization.diff` — `git apply` it to revisit.
+
 ### Data format = Lean daily zips
 `Data/equity/usa/daily/<ticker>.zip` → `<ticker>.csv`, no header:
 `yyyyMMdd HH:mm,Open*10000,High*10000,Low*10000,Close*10000,Volume`. Compact
