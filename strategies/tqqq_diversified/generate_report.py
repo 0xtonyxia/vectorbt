@@ -65,7 +65,7 @@ rolling    = result.get("rollingWindow", {})
 # Build comparison portfolios
 # Use strategy date range
 _comp_prices = {
-    t: read_lean_daily(t) for t in ["SPY", "QQQ", "TQQQ", "BTAL", "BIL", "GLD", "XLP", "CURE", "DBMF"]
+    t: read_lean_daily(t) for t in ["SPY", "QQQ", "TQQQ", "BTAL", "BIL", "GLD", "XLP", "CURE", "DBMF", "QLD"]
 }
 
 # ---------------------------------------------------------------------------
@@ -170,6 +170,10 @@ comp_qqq_eq   = simulate_buy_and_hold(_comp_prices.get("QQQ", {}), eq_dates, _in
 comp_bt50_eq  = simulate_rebalance_portfolio(
     {"BTAL": 0.50, "TQQQ": 0.50}, _comp_prices, eq_dates, _initial,
 )
+# QLD base: 2x-leverage attack leg (QLD) instead of 3x (TQQQ), annual rebalance
+# only — a plain diversified combo, no volatility timing.
+_qld_weights = {"QLD": 0.30, "DBMF": 0.20, "BTAL": 0.15, "GLD": 0.15, "XLP": 0.15, "CURE": 0.05}
+comp_qld_eq   = simulate_rebalance_portfolio(_qld_weights, _comp_prices, eq_dates, _initial)
 comp_t1_eq, t1_log     = simulate_timing1(_comp_prices, eq_dates, _initial, rv_window=20, rv_threshold=22, check_months=1)
 comp_t1_25_eq, t1_25_log = simulate_timing1(_comp_prices, eq_dates, _initial, rv_window=20, rv_threshold=25, check_months=1)
 comp_t1_20_eq, t1_20_log = simulate_timing1(_comp_prices, eq_dates, _initial, rv_window=20, rv_threshold=20, check_months=1)
@@ -405,6 +409,7 @@ comp_strat_stats = compute_stats(comp_strat_eq, eq_dates)  # from simulated equi
 comp_spy_stats   = compute_stats(comp_spy_eq, eq_dates)
 comp_qqq_stats   = compute_stats(comp_qqq_eq, eq_dates)
 comp_bt50_stats  = compute_stats(comp_bt50_eq, eq_dates)
+comp_qld_stats   = compute_stats(comp_qld_eq, eq_dates)
 comp_t1_stats     = compute_stats(comp_t1_eq, eq_dates)
 comp_t1_25_stats  = compute_stats(comp_t1_25_eq, eq_dates)
 comp_t1_20_stats  = compute_stats(comp_t1_20_eq, eq_dates)
@@ -426,6 +431,7 @@ comp_strat_stats["beta"]  = compute_beta(comp_strat_eq, comp_spy_eq)
 comp_spy_stats["beta"]    = 1.00
 comp_qqq_stats["beta"]    = compute_beta(comp_qqq_eq, comp_spy_eq)
 comp_bt50_stats["beta"]   = compute_beta(comp_bt50_eq, comp_spy_eq)
+comp_qld_stats["beta"]    = compute_beta(comp_qld_eq, comp_spy_eq)
 comp_t1_stats["beta"]     = compute_beta(comp_t1_eq, comp_spy_eq)
 comp_t1_25_stats["beta"]  = compute_beta(comp_t1_25_eq, comp_spy_eq)
 comp_t1_20_stats["beta"]  = compute_beta(comp_t1_20_eq, comp_spy_eq)
@@ -448,6 +454,7 @@ _spy_cagr = comp_spy_stats.get("cagr", 0)
 # Diversification ratios
 dr_strat   = compute_diversification_ratio(_strat_weights, _all_strat_prices, eq_dates)
 dr_bt50    = compute_diversification_ratio({"BTAL": 0.50, "TQQQ": 0.50}, _comp_prices, eq_dates)
+dr_qld     = compute_diversification_ratio(_qld_weights, _comp_prices, eq_dates)
 dr_dbmf_strat = compute_diversification_ratio(_dbmf_base_weights, _comp_prices, eq_dates)
 dr_dbbt_strat = compute_diversification_ratio(_dbbt_base_weights, _comp_prices, eq_dates)
 dr_t1 = dr_t1_25 = dr_t1_20 = dr_t1_rv60 = dr_t2 = 0.0  # timing: variable weights
@@ -474,6 +481,7 @@ eq_vals = comp_strat_eq
 dd_spy   = comp_spy_stats.get("dd_series", [])
 dd_qqq   = comp_qqq_stats.get("dd_series", [])
 dd_bt50  = comp_bt50_stats.get("dd_series", [])
+dd_qld   = comp_qld_stats.get("dd_series", [])
 
 # Precompute Y-axis floor for drawdown charts (avoids JS Math.min stack overflow)
 _dd_min = min(
@@ -481,6 +489,7 @@ _dd_min = min(
     min(dd_spy) if dd_spy else 0,
     min(dd_qqq) if dd_qqq else 0,
     min(dd_bt50) if dd_bt50 else 0,
+    min(dd_qld) if dd_qld else 0,
     min(dd_t1) if dd_t1 else 0,
     min(dd_t1_25) if dd_t1_25 else 0,
     min(dd_t1_20) if dd_t1_20 else 0,
@@ -503,6 +512,7 @@ _dd_range_json = j([round(_dd_min, 2), 2])
 _, comp_spy_ann  = compute_annual_returns(eq_dates, comp_spy_eq) if comp_spy_eq else ([], [])
 _, comp_qqq_ann  = compute_annual_returns(eq_dates, comp_qqq_eq) if comp_qqq_eq else ([], [])
 _, comp_bt50_ann   = compute_annual_returns(eq_dates, comp_bt50_eq) if comp_bt50_eq else ([], [])
+_, comp_qld_ann    = compute_annual_returns(eq_dates, comp_qld_eq) if comp_qld_eq else ([], [])
 _, comp_t1_ann     = compute_annual_returns(eq_dates, comp_t1_eq) if comp_t1_eq else ([], [])
 _, comp_t1_25_ann  = compute_annual_returns(eq_dates, comp_t1_25_eq) if comp_t1_25_eq else ([], [])
 _, comp_t1_20_ann  = compute_annual_returns(eq_dates, comp_t1_20_eq) if comp_t1_20_eq else ([], [])
@@ -802,6 +812,8 @@ _portfolios = [
     {"name": "Timing1-DBBT-RV20-22%", "color": "#e11d48", "stats": comp_t1b_22_stats, "eq": comp_t1b_22_eq, "dd": dd_t1b_22, "ann": comp_t1b_22_ann, "dr": 0, "bg": "#fff1f2"},
     {"name": "Timing1-DBBT-RV20-25%", "color": "#f43f5e", "stats": comp_t1b_25_stats, "eq": comp_t1b_25_eq, "dd": dd_t1b_25, "ann": comp_t1b_25_ann, "dr": 0, "bg": "#ffe4e6"},
     {"name": "Timing1-DBBT-RV20-20%", "color": "#fb7185", "stats": comp_t1b_20_stats, "eq": comp_t1b_20_eq, "dd": dd_t1b_20, "ann": comp_t1b_20_ann, "dr": 0, "bg": "#fff1f2"},
+    # QLD base (2x attack leg, annual rebalance only — no timing)
+    {"name": "30qld+20dbmf+15btal+15gld+15xlp+5cure", "color": "#ea580c", "stats": comp_qld_stats, "eq": comp_qld_eq, "dd": dd_qld, "ann": comp_qld_ann, "dr": dr_qld, "bg": "#fff7ed"},
 ]
 
 def _build_stats_table_rows():
@@ -1263,10 +1275,12 @@ const V_strat = {j(eq_vals)};
 const V_spy   = {j(comp_spy_eq)};
 const V_qqq   = {j(comp_qqq_eq)};
 const V_bt50  = {j(comp_bt50_eq)};
+const V_qld   = {j(comp_qld_eq)};
 const DD_strat = {j(dd_strat)};
 const DD_spy   = {j(dd_spy)};
 const DD_qqq   = {j(dd_qqq)};
 const DD_bt50  = {j(dd_bt50)};
+const DD_qld   = {j(dd_qld)};
 const V_t1={j(comp_t1_eq)}, V_t1_25={j(comp_t1_25_eq)}, V_t1_20={j(comp_t1_20_eq)}, V_t1_rv60={j(comp_t1_rv60_eq)};
 const V_t2={j(comp_t2_eq)}, V_t2_25={j(comp_t2_25_eq)}, V_t2_20={j(comp_t2_20_eq)};
 const V_dbmf_strat={j(comp_dbmf_strat_eq)}, V_t1d_22={j(comp_t1d_22_eq)}, V_t1d_25={j(comp_t1d_25_eq)}, V_t1d_20={j(comp_t1d_20_eq)};
@@ -1401,6 +1415,7 @@ function renderChart(id) {{
       {{x:D,y:V_t1b_22,name:'T1-DBBT-22%',type:'scatter',mode:'lines',line:{{color:'#e11d48',width:1.5}}}},
       {{x:D,y:V_t1b_25,name:'T1-DBBT-25%',type:'scatter',mode:'lines',line:{{color:'#f43f5e',width:1.5}}}},
       {{x:D,y:V_t1b_20,name:'T1-DBBT-20%',type:'scatter',mode:'lines',line:{{color:'#fb7185',width:1.5}}}},
+      {{x:D,y:V_qld,name:'QLD-Base',type:'scatter',mode:'lines',line:{{color:'#ea580c',width:2}}}},
     ],{{...L_custom,yaxis:{{...L_custom.yaxis,title:'Portfolio Value ($)',tickformat:'$,.0f'}}}},C);
     setupSortedHover('ch-equity');
     setupZoomRebase('ch-equity');
@@ -1427,6 +1442,7 @@ function renderChart(id) {{
       {{x:D,y:DD_t1b_22,name:'T1-DBBT-22%',type:'scatter',mode:'lines',line:{{color:'#e11d48',width:1}}}},
       {{x:D,y:DD_t1b_25,name:'T1-DBBT-25%',type:'scatter',mode:'lines',line:{{color:'#f43f5e',width:1}}}},
       {{x:D,y:DD_t1b_20,name:'T1-DBBT-20%',type:'scatter',mode:'lines',line:{{color:'#fb7185',width:1}}}},
+      {{x:D,y:DD_qld,name:'QLD-Base',type:'scatter',mode:'lines',line:{{color:'#ea580c',width:1.5}}}},
     ],{{...L_custom,yaxis:{{...L_custom.yaxis,title:'Drawdown',tickformat:'.1f',ticksuffix:'%',range:ddRange}},margin:{{t:115,r:20,b:40,l:90}}}},C);
     setupSortedHover('ch-dd-summary');
     setupZoomRebase('ch-dd-summary');
@@ -1452,6 +1468,7 @@ function renderChart(id) {{
       {{x:{j(ann_years)},y:{j(comp_t1b_25_ann)},name:'T1-DBBT-25%',type:'bar',marker:{{color:'#f43f5e'}},hovertemplate:'%{{y:.1f}}%<extra>%{{fullData.name}}</extra>'}},
       {{x:{j(ann_years)},y:{j(comp_t1b_22_ann)},name:'T1-DBBT-22%',type:'bar',marker:{{color:'#e11d48'}},hovertemplate:'%{{y:.1f}}%<extra>%{{fullData.name}}</extra>',visible:'legendonly'}},
       {{x:{j(ann_years)},y:{j(comp_t1b_20_ann)},name:'T1-DBBT-20%',type:'bar',marker:{{color:'#fb7185'}},hovertemplate:'%{{y:.1f}}%<extra>%{{fullData.name}}</extra>',visible:'legendonly'}},
+      {{x:{j(ann_years)},y:{j(comp_qld_ann)},name:'QLD-Base',type:'bar',marker:{{color:'#ea580c'}},hovertemplate:'%{{y:.1f}}%<extra>%{{fullData.name}}</extra>'}},
     ],{{...L_native,barmode:'group',yaxis:{{...L_native.yaxis,title:'Return (%)',ticksuffix:'%'}},margin:{{t:115,r:20,b:50,l:90}}}},C);
   }}
   else if(id==='ch-hist') {{
@@ -1481,6 +1498,7 @@ function renderChart(id) {{
       {{x:D,y:DD_t1b_22,name:'T1-DBBT-22%',type:'scatter',mode:'lines',line:{{color:'#e11d48',width:1}}}},
       {{x:D,y:DD_t1b_25,name:'T1-DBBT-25%',type:'scatter',mode:'lines',line:{{color:'#f43f5e',width:1}}}},
       {{x:D,y:DD_t1b_20,name:'T1-DBBT-20%',type:'scatter',mode:'lines',line:{{color:'#fb7185',width:1}}}},
+      {{x:D,y:DD_qld,name:'QLD-Base',type:'scatter',mode:'lines',line:{{color:'#ea580c',width:1.5}}}},
     ],{{...L_custom,yaxis:{{...L_custom.yaxis,title:'Drawdown',tickformat:'.1f',ticksuffix:'%',range:ddRange}}}},C);
     setupSortedHover('ch-dd-full');
     setupZoomRebase('ch-dd-full');
@@ -1561,6 +1579,8 @@ const PORTFOLIOS = [
   {{name:'Timing1-DBBT-RV20-22%',color:'#e11d48',eq:V_t1b_22,dd:DD_t1b_22,bg:'#fff1f2',dr:0}},
   {{name:'Timing1-DBBT-RV20-25%',color:'#f43f5e',eq:V_t1b_25,dd:DD_t1b_25,bg:'#ffe4e6',dr:0}},
   {{name:'Timing1-DBBT-RV20-20%',color:'#fb7185',eq:V_t1b_20,dd:DD_t1b_20,bg:'#fff1f2',dr:0}},
+  // QLD base (2x, annual rebalance only)
+  {{name:'30qld+20dbmf+15btal+15gld+15xlp+5cure',color:'#ea580c',eq:V_qld,dd:DD_qld,bg:'#fff7ed',dr:{f'{dr_qld:.2f}'} }},
 ];
 const SPY_IDX = PORTFOLIOS.findIndex(p=>p.name==='100% SPY');
 

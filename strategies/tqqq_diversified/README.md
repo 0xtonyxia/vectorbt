@@ -11,7 +11,7 @@ This strategy lives inside a fork of
 optional library backend while hosting the strategy code under `strategies/`.
 Upstream is preserved as the `upstream` remote.
 
-The deliverable is a **single interactive HTML report** comparing 19 portfolios
+The deliverable is a **single interactive HTML report** comparing 20 portfolios
 side-by-side (stats table + Performance / Drawdown / Returns / Allocation /
 Rebalance Log tabs, client-side time-range recompute, sorted hover, zoom-aware
 Max-DD annotations).
@@ -68,6 +68,11 @@ python3.11 strategies/tqqq_diversified/download_data.py --full     # force full 
 | **BTAL base** | 35% TQQQ + 30% BTAL + 15% GLD + 15% XLP + 5% CURE |
 | **DBMF base** | 25% TQQQ + 40% DBMF + 15% GLD + 15% XLP + 5% CURE |
 | **DBBT base** | 30% TQQQ + 20% DBMF + 15% BTAL + 15% GLD + 15% XLP + 5% CURE |
+| **QLD base** | 30% QLD + 20% DBMF + 15% BTAL + 15% GLD + 15% XLP + 5% CURE |
+
+**QLD** is 2x QQQ (vs TQQQ's 3x). The **QLD base** is a standalone annual-rebalance
+combo only — no volatility timing (no Timing1/Timing2 variants). It mirrors the
+DBBT base's weights but swaps the 3x attack leg for a 2x one.
 
 Legs: **TQQQ** 3x QQQ (growth engine) · **BTAL** anti-beta long/short hedge ·
 **DBMF** managed-futures / trend hedge · **GLD** gold · **XLP** consumer staples ·
@@ -118,14 +123,14 @@ families share the same window). Use `--start 2011-09-14` for the long history
 ├── vectorbt/ tests/ docs/ ...      # upstream vectorbt library (untouched)
 │
 ├── Data/equity/usa/daily/          # Daily OHLCV zips (Lean format)
-│   ├── tqqq.zip btal.zip gld.zip xlp.zip cure.zip dbmf.zip
+│   ├── tqqq.zip btal.zip gld.zip xlp.zip cure.zip dbmf.zip qld.zip
 │   └── spy.zip qqq.zip bil.zip
 │
 ├── strategies/tqqq_diversified/
 │   ├── README.md                   # this file
 │   ├── sim_engine.py               # simulation + metrics engine (pluggable backend)
 │   ├── run_backtest.py             # driver: refresh data → run base → invoke report
-│   ├── generate_report.py          # builds the interactive HTML (runs all 19 sims)
+│   ├── generate_report.py          # builds the interactive HTML (runs all 20 sims)
 │   └── download_data.py            # yfinance → Lean-format daily zips
 │
 └── output/<strategy>-<ts>/         # per-run output (gitignored)
@@ -205,7 +210,7 @@ rows with NaN OHLC (a provisional session for a less-liquid ETF, e.g. DBMF, woul
 otherwise crash the int conversion).
 
 ### HTML report architecture
-- **Server-side (Python):** runs all 19 simulations, embeds equity curves as
+- **Server-side (Python):** runs all 20 simulations, embeds equity curves as
   rounded JS arrays, computes the initial stats table.
 - **Client-side (JS):** the time-range selector triggers `recalcAll()` →
   re-base each curve to $100K at the selected start → recompute drawdown +
